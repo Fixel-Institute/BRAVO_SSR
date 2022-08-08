@@ -1,0 +1,875 @@
+{% extends 'documentation_overview_nav.html' %}
+{% load static %}
+
+{% block article %}
+<article class="docs-article active" id="section-introduction">
+  <header class="docs-header">
+    <h1 class="docs-heading"> Introduction
+      <span class="docs-time">Last updated: 2022-05-25</span>
+    </h1>
+    <section class="docs-intro">
+      <p>
+        Percept Analysis Platform is a Python-based Web Application designed to process and analyze Medtronic Percept Neurostimulator data.
+        This documentation is intended to provide detail explainations on all functions currently available to the users.
+      </p>
+    </section>
+    <p>
+      The website you are viewing is a demo version designed for reviewers.
+      The demo version contain only "Research" account and deidentified IDs will be used in place of patient identifiers.
+      Despite only deidentification IDs are shown, the platform will still retain the data in cloud database to demonstrate the capability of long-term data aggregation.
+      It is up to the user to ensure that any data uploaded will comply with their institutes' requirement for deidentification.
+    </p>
+  </header>
+  <footer class="footer">
+    <div class="container text-left pt-2 pb-3">
+      <small class="copyright">
+        © <script>
+          document.write(new Date().getFullYear())
+        </script>,
+        by Jackson Cagle @ Norman Fixel Insitute for Neurological Diseases.
+      </small>
+    </div>
+  </footer>
+</article>
+
+<article class="docs-article active" id="section-authentication">
+  <header class="docs-header">
+    <h1 class="docs-heading"> Authentication
+      <span class="docs-time">Last updated: 2022-05-25</span>
+    </h1>
+    <section class="docs-intro">
+      <p>
+        Account authentication is done purely on the Python-based backend server.
+        In this section, I will describe the primary workflow for account registration and authentication.
+       </p>
+    </section>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/Signup.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/Signup.png' %}" alt="" title="Figure 1.1. Sign Up Interface"></img>
+        </a>
+      </div>
+			<div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/Signin.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/Signin.png' %}" alt="" title="Figure 1.2. Sign In Interface"></img>
+        </a>
+			</div>
+		</div>
+  </header>
+  <section class="docs-section" id="section-auth-registration">
+    <h2 class="section-heading">Account Registration</h2>
+    <p>
+      Account Registration interface can be seen in Figure 1.1. A basic registration process that require the user to input their first and last name.
+      The email address provided by the user will also be used as the Sign In credential (Username). All passwords are hashed before storage to ensure securtiy.
+    </p>
+    <p>
+      Account registered by the user will always default to "Research" account, which will remove patient identifications before display in any part of the webpage.
+      Promotion of a "Research" account to "Clinician" account can be performed by Admin (the local admin at your institute that setup the platform).
+      Clinician account will gain access to not only the patient identifiers, but also access to all data uploaded by other "Clinician" account within the same institute.
+      On contrary, "Research" account's upload will not be added to the "Clinician" account nor any other "Research" account, everything will be specific to your account.
+    </p>
+    <p>
+      As a demo web application, no verification will be used on the registration email. Feel free to use made-up email address to register.
+      In addition, no "Clinician" nor "Admin" accounts are created for the demo application.
+    </p>
+  </section>
+
+  <section class="docs-section" id="section-auth-login">
+    <h2 class="section-heading">Account Sign-In</h2>
+    <p>
+      A user can sign in to their account through the Sign-In interface as shown in Figure 1.2. Session Cookies are used to store your credentials and further verification within the Web Application.
+      If the session idle for more than 60 minutes, the user will be required to login again before continue using the application.
+    </p>
+  </section>
+</article>
+
+<article class="docs-article active" id="section-patients">
+  <header class="docs-header">
+    <h1 class="docs-heading"> Patient Table
+      <span class="docs-time">Last updated: 2022-05-26</span>
+    </h1>
+    <section class="docs-intro">
+      <p>
+        Patient Table is the first interface available to the user once logged in. A typical patient table containing more than 200 patients is shown in Figure 2.1.
+        The clinician view will display patient's name, diagnosis, device name (and type of neurostimulator), and last accessed session file for each patient.
+        A search bar is available to user (top right of the table). Filterable keywords include 1) Name, 2) Diagnosis, and 3) Device Name.
+       </p>
+       <p>
+         In a de-identified "Researcher" account view, fields are mostly leave as blank if user didn't provide any information (Figure 2.2).
+         It is up to the researcher to properly label each deidentified patient to avoid confusion.
+         Details on how to create a deidentified patient will be discussed in <a href="#section-patient-deidnetified"> De-Identified Patients (Research-Only) </a> section.
+         Details on how to edit an existing patient's information will be discussed in <a href="#section-patient-overview"> Patient Overview </a> section.
+       </p>
+    </section>
+
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/IdentifiedTable.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/IdentifiedTable.png' %}" alt="" title="Figure 2.1. Clinician-view Table (Blurred for Deidentification)."></img>
+        </a>
+      </div>
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/DeidentifiedTable.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/DeidentifiedTable.png' %}" alt="" title="Figure 2.2. Clinician-view Table (Blurred for Deidentification)."></img>
+        </a>
+      </div>
+		</div>
+  </header>
+  <section class="docs-section" id="section-patient-deidnetified">
+    <h2 class="section-heading">De-Identified Patients (Research-Only)</h2>
+    <p>
+      In deidentied patient table, most contents are leave as blank unless labeled by the user.
+      In order to create a new deidentified patient in the table, follow the procedure in Figure 2.3.
+      After clicking "Add Patient" in Red Box 1, a pop-up dialog will be shown that allow user to enter the Patient Deidentification Information.
+    </p>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/CreateDeidentifiedPatient1.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/CreateDeidentifiedPatient1.png' %}" alt="" title="Figure 2.3a. Create Deidentified Patient (Blank)."></img>
+        </a>
+      </div>
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/CreateDeidentifiedPatient2.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/CreateDeidentifiedPatient2.png' %}" alt="" title="Figure 2.3b. Create Deidentified Patient (Example)."></img>
+        </a>
+      </div>
+		</div>
+    <p>
+      Among "Patient Identifier", "Patient Project Name", and "Diagnosis", only "Diagnosis" can be leave as blank.
+      Device information can all be left as blank. A random string will be generated as the device deidentified ID.
+      User may drag-and-drop session files to the upload area, or click the upload area to bring up file selector.
+      Multiple files can be selected at once and upload at once.
+    </p>
+    <p>
+      Once clicking "Create" in Red Box 2, a new row will be insert to the deidentified patient table.
+      If this patient has multiple device, follow instruction in <a href="#section-patient-upload"> Upload JSON Files (Research Only) </a> to add new devices.
+    </p>
+  </section>
+
+  <section class="docs-section" id="section-patient-idnetified">
+    <h2 class="section-heading">Identified Patient Table (Clinician-Only)</h2>
+    <p>
+      In the clinician account view, the patient table will be shown with identifiers.
+      Within clinician view, we eliminate the process to manually create patient from the table.
+      In contrast, all information are automatically populated when user uploads identified JSON files exported from Percept Neurostimulator.
+    </p>
+    <p>
+      The primary health information extracted are based on 1) Patient First and Last Name, and 2) Device Serial Number.
+      Data aggregation is based primarily on Device Serial Number, and Patient Identifiers are used to determine if multiple devices belong to the same patient or not.
+    </p>
+  </section>
+
+  <section class="docs-section" id="section-patient-report">
+    <h2 class="section-heading">Session Report (Beta)</h2>
+    <p>
+      Session Report is a function available to both Research view and Clinician view.
+      This function is accessible through the "View Single Session Report" button at the top of Patient Table.
+      This function intend to generate a brief report from a single Session JSON file uploaded by the user without aggregating past reports nor saving the reports for future reference.
+    </p>
+    <div class="callout-block callout-block-danger">
+      <div class="content">
+        <h4 class="callout-title">
+          <span class="callout-icon-holder me-1">
+            <i class="fas fa-exclamation-triangle"></i>
+          </span>
+          IMPORTANT
+        </h4>
+        <p>
+          This function <strong>DOES NOT DEIDENTIFY</strong> the session JSON file for you, and the resulting report page will contain idnetifiable information.
+          This function is primarily designed for clinicians who want to see a more detailed report than available on Medtronic's Report page.
+        </p>
+      </div>
+    </div>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-6 mb-3">
+        <a href="{% static 'images/SessionReport.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/SessionReport.png' %}" alt="" title="Figure 2.4. Session Report."></img>
+        </a>
+      </div>
+		</div>
+    <p>
+      Currently in Beta version. The information displayed includes 1) Basic patient identifier obtained from the uploaded JSON file, 2) Device Information and lead configurations, and 3) detail therapy configurations.
+      The platform will also calculate percent time in each group over duration of past visit.
+    </p>
+    <p>
+      Since identifers are present in Session Report, we take multiple measures to ensure as much security as we can provide.
+      First, the JSON session file will be immediately deleted from the server once the report is generated.
+      Second, the report page will only live in your browser for single-use, and user cannot access this page anymore.
+      However, despite all this, the user must comply with their institute's PHI policy and potentially edit the Session JSON files with modified PHI so the uploaded file doesn't contain real PHI.
+    </p>
+  </section>
+</article>
+
+<article class="docs-article active" id="section-patient-overview">
+  <header class="docs-header">
+    <h1 class="docs-heading"> Patient Overview
+      <span class="docs-time">Last updated: 2022-05-26</span>
+    </h1>
+    <section class="docs-intro">
+      <p>
+        Patient Overview is detailed interface when a patient is selected from the Patient Table.
+        It describes brief information regarding the patient, and the devices currently associated with the specific patient.
+        It also serves as the primary navigation to different analysis provided by the platform.
+      </p>
+      <p>
+        In the device information table, all previous devices associated with the patient will be shown in a table.
+        Implant date and estimated battery life may not be accurate in Research Account view if removed as PHI.
+        Electrode name and targets are information stored in Percept Device, which will be downloaded along with the JSON file.
+        These information will be automatically populated as long as they are not removed from JSON file.
+      </p>
+      <h6> Future Updates </h6>
+      <p>
+        Device Type only support Medtronic Percept PC device in Research View.
+        However, the JSON files obtained from Activa SC, PC, or RC are parsible with the platform.
+        Additional supported devices will be included as we obtained more data.
+      </p>
+    </section>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/PatientOverview.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/PatientOverview.png' %}" alt="" title="Figure 3.1. Patient Overview (Deidentified)."></img>
+        </a>
+      </div>
+		</div>
+  </header>
+  <section class="docs-section" id="section-patient-edit">
+    <h2 class="section-heading">Edit Patient Information</h2>
+    <p>
+      User can edit the patient information through "Edit Information" in Red Box 1 of Figure 3.2.
+      A pop-up dialog will be shown to user with existing patient information.
+      Edit the desire fields in Red Box 2 then click "Update" will prompt a database update.
+      The resulting edit can be seen in the post-update view in Red Box 3.
+    </p>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/EditPatientInfo.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/EditPatientInfo.png' %}" alt="" title="Figure 3.2. Edit Patient Information."></img>
+        </a>
+      </div>
+		</div>
+  </section>
+
+  <section class="docs-section" id="section-patient-upload">
+    <h2 class="section-heading">Upload JSON Data (Research-Only)</h2>
+    <p>
+      Here is where the Research account should upload their data.
+      Unlike Clinician account, the Research account is assumed to be working with deidentified files.
+      That means the PHI used to group uploaded JSON into respective Patient ID or Device ID will not be present in the uploaded JSON files.
+      This additional process required by the Research account ensure we can properly manage the data and organize them in correct group.
+    </p>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/UploadDeidentifiedData.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/UploadDeidentifiedData.png' %}" alt="" title="Figure 3.3. Upload Deidentified Patient Data (Research-Only)."></img>
+        </a>
+      </div>
+		</div>
+    <p>
+      After initial deidentified patient creation in <a href="#section-patient-deidnetified"> Deidentified Patient Table </a>, the patient overview will be shown without any associated device.
+      The user may manually add a Percept PC device via "Add Device" in Red Box 1 of Figure 3.3.
+      The fields can all be leave as blank, a fake device ID will be generated in place with most information unavailable to the user.
+      Once generated, look at the device table and you will see "Upload" in Red Box 3 of Figure 3.3.
+      The user then can upload one or more files associate with that device.
+      If a patient is using bilateral Percept Device, the user should create a second blank device and upload files separately.
+    </p>
+  </section>
+
+  <section class="docs-section" id="section-patient-navigation">
+    <h2> Primary Analysis Navigations </h2>
+    <div class="table-responsive my-4">
+      <table class="table table-bordered">
+        <tbody>
+        <tr>
+          <th class="theme-bg-light"><a class="theme-link" href="#section-therapyhistory">Therapy History</a></th>
+          <td>Stimulation configurations in all past sessions, and detailed therapy group change trend. </td>
+        </tr>
+        <tr>
+          <th class="theme-bg-light"><a class="theme-link" href="#section-brainsensesurvey">BrainSense Survey</a></th>
+          <td>Aggregated BrainSense Survey conducted during each session. </td>
+        </tr>
+        <tr>
+          <th class="theme-bg-light"><a class="theme-link" href="#section-brainsensestreaming">BrainSense Streaming</a></th>
+          <td>Realtime Streaming performed during each session. </td>
+        </tr>
+        <tr>
+          <th class="theme-bg-light"><a class="theme-link" href="#section-indefinitestreaming">Indefinite Streaming</a></th>
+          <td>Another form of Realtime Streaming, based on simultaneous multi-channel streaming without stimulation. </td>
+        </tr>
+        <tr>
+          <th class="theme-bg-light"><a class="theme-link" href="#section-chroniclfps">Chronic Local Field Potentials (LFPs)</a></th>
+          <td>Aggregated BrainSense Power recording recorded chronically when patient is using BrainSense-enabled therapy group. </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="docs-section" id="section-patient-delete">
+    <h2 class="section-heading">Delete Devices or Delete Patient</h2>
+    <p>
+      Patient entry and device entry can be manually deleted by the following procedure.
+      It is very unlikley for a clinician account to perform such task, nevertheless this is available to both Clinician Account and Research Account.
+    </p>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/DeleteDevice.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/DeleteDevice.png' %}" alt="" title="Figure 3.4a. Delete Device Entry."></img>
+        </a>
+      </div>
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/DeletePatient.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/DeletePatient.png' %}" alt="" title="Figure 3.4b. Delete Patient Entry."></img>
+        </a>
+      </div>
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/SessionsManagement.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/SessionsManagement.png' %}" alt="" title="Figure 3.4c. View or Delete Specific Session JSON File."></img>
+        </a>
+      </div>
+		</div>
+    <p>
+      Clicking either Edit Device or Edit Patient Information, a pop-up window will be shown with a "Delete" button.
+      Clicking "Delete" will prompt user for confirming if they want to delete the device and all associated data from the server.
+      Once confirmed, data will be removed and the page will be refreshed to reflect new information.
+    </p>
+    <p>
+      If patient entry is deleted, the page will automatically redirect back to Patient Table view.
+    </p>
+    <p>
+      If user want to delete individual session file, they may use "Sessions Management" tab shown in Figure 3.4c.
+    </p>
+  </section>
+
+</article>
+
+<article class="docs-article active" id="section-therapyhistory">
+  <header class="docs-header">
+    <h1 class="docs-heading"> Therapy History View
+      <span class="docs-time">Last updated: 2022-05-26</span>
+    </h1>
+    <section class="docs-intro">
+      <p>
+        Therapy History provide user an overview of all the past therapy configurations use by the user.
+        These information are primarily extracted from <code>GroupHistory</code> JSON Field in the Session file.
+      </p>
+    </section>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-6 mb-3">
+        <a href="{% static 'images/TherapyHistory.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/TherapyHistory.png' %}" alt="" title="Figure 4.1. Therapy History Overview."></img>
+        </a>
+      </div>
+		</div>
+  </header>
+
+  <section class="docs-section" id="section-therapyhistory-changelog">
+    <h2 class="section-heading">Therapy Change Log</h2>
+    <p>
+      Therapy Change Log is a trend generated from Medtronic Session file's <code>DiagnosticData.EventLogs</code> JSON Field.
+      A typical Therapy Change Log looks somewhat like the following code snipet:
+    </p>
+    <div class="docs-code-block pb-0">
+      <pre class="rounded">
+        <code class="json hljs">
+  {
+    "DateTime": "2021-10-25T22:35:01Z",
+    "ParameterTrendId": "ParameterTrendIdDef.ActiveGroup",
+    "NewGroupId": "GroupIdDef.GROUP_B",
+    "OldGroupId": "GroupIdDef.GROUP_D"
+  }
+        </code>
+      </pre>
+		</div>
+    <p>
+      The datetime field indicate the time of group changes, based on UTC timezone and not patient's local timezone.
+      In our platform, all time are presented as the user's local timezone.
+    </p>
+  </section>
+
+  <section class="docs-section" id="section-therapyhistory-configurations">
+    <h2 class="section-heading">Past Therapy Configuration</h2>
+    <p>
+      The therapy configuration extracted from GroupHistory typically contains all information about the stimulation.
+      For example, in Figure 4.2 we present a typical therapy configurations for a patient before their session on July 19th, 2021.
+      The reason that these configurations are "Before" certain date, because the <code>GroupHistory</code> JSON field's time indicate the date when the setting was changed.
+    </p>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-6 mb-3">
+        <a href="{% static 'images/TherapyConfiguration.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/TherapyConfiguration.png' %}" alt="" title="Figure 4.2. Detail Therapy Configuration."></img>
+        </a>
+      </div>
+		</div>
+    <p>
+      A typical configuration contain up to 4 Groups (A,B,C,D). Each group may contain Left/Right hemisphere, each each hemisphere may contain up to 2 program groups.
+      Therefore, each group may have up to 4 rows.
+      Right after the Group ID is a calculated percent usage based on Therapy Change Log.
+    </p>
+    <div class="callout-block callout-block-warning">
+      <div class="content">
+        <h4 class="callout-title">
+          <span class="callout-icon-holder me-1">
+            <i class="fas fa-bullhorn"></i>
+          </span>
+          Warning
+        </h4>
+        <p>
+          BrainSense may show 0.0Hz, because GroupHistory doesn't always maintain good storage of the BrainSense Frequency.
+        </p>
+      </div>
+    </div>
+  </section>
+</article>
+
+<article class="docs-article active" id="section-brainsensesurvey">
+  <header class="docs-header">
+    <h1 class="docs-heading"> BrainSense Survey View
+      <span class="docs-time">Last updated: 2022-05-26</span>
+    </h1>
+    <section class="docs-intro">
+      <p>
+        BrainSense Survey are a form of neural signal recording performed by Medtronic's Percept neurostimulator.
+        It is stored in the Session JSON file as <code>LfpMontageTimeDomain</code> JSON Field.
+        Each recording contains about 20 seconds time-domain recording recorded at 250Hz sampling rate.
+      </p>
+    </section>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-6 mb-3">
+        <a href="{% static 'images/BrainSenseSurvey.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/BrainSenseSurvey.png' %}" alt="" title="Figure 5.1. BrainSense Survey Overview."></img>
+        </a>
+      </div>
+		</div>
+    <p>
+      BrainSense Surveys are independent snapshot of neural activity at the time of recording.
+      We aggregated the Surveys collected over the span of patient's visit at the institute to inform
+      changes of brain signal at the target brain region as desease progress (or as therapy delivered).
+    </p>
+  </header>
+
+  <section class="docs-section" id="section-brainsensesurvey-individual">
+    <h2 class="section-heading">Power Spectrum across Channels</h2>
+    <p>
+      Power Spectrum are calculated with Welch's Periodogram method.
+      The Session JSON files divide one survey into multiple simultaneous recordings of different channels.
+      We organize them by performing clustering of timestamp. Recordings perform close to each other are shown side by side for comparison.
+    </p>
+    <p>
+      The survey are interactive and user may selectively display channels to display.
+      Figure 5.2 and 5.3 demonstrate how Segmented Survey can be better compared when dividing into 3 segmented groups.
+      Figure 5.4 also shows the power of Interactive Plot capability, which allow hover display and custom zoom and pan.
+    </p>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/SurveySegmented.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/SurveySegmented.png' %}" alt="" title="Figure 5.2. BrainSense Survey Segment Display."></img>
+        </a>
+      </div>
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/SurveySegmentSelected.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/SurveySegmentSelected.png' %}" alt="" title="Figure 5.3. BrainSense Survey Segment Toggle."></img>
+        </a>
+      </div>
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/SurveyHover.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/SurveyHover.png' %}" alt="" title="Figure 5.4. BrainSense Survey Hover."></img>
+        </a>
+      </div>
+		</div>
+    <p>
+      A dropdown menu is shown at the top of the page. The user may choose which Survey group to view.
+      Left and right hemisphere are shown in different figure. Different channels are colored differently.
+    </p>
+  </section>
+
+  <section class="docs-section" id="section-brainsensesurvey-acrosstime">
+    <h2 class="section-heading">Power Spectrum across Time</h2>
+    <p>
+      BrainSense Survey across time is an analysis perform across time.
+      It present all surveys recorded on the same channel organized by order of acquisition, colored by gradient of colormap.
+      A dropdown menu is presented at top-right of the figure block. User may choose which channel to view (Figure 5.6).
+    </p>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/SurveyAcrossTime.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/SurveyAcrossTime.png' %}" alt="" title="Figure 5.5. BrainSense Survey Across Time."></img>
+        </a>
+      </div>
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/SurveyChannelSelector.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/SurveyChannelSelector.png' %}" alt="" title="Figure 5.6. BrainSense Survey Across Time Channel Selector."></img>
+        </a>
+      </div>
+		</div>
+    <p>
+      This allow user to visually identify disappearance and emergence of certain brain signals.
+      For example, in Figure 5.5 we can see that an changes in recorded signal between August to September 2021.
+    </p>
+  </section>
+</article>
+
+<article class="docs-article active" id="section-brainsensestreaming">
+  <header class="docs-header">
+    <h1 class="docs-heading"> BrainSense Streaming View
+      <span class="docs-time">Last updated: 2022-05-27</span>
+    </h1>
+    <section class="docs-intro">
+      <p>
+        BrainSense Streaming is one of the most detailed analysis provided by the platform.
+        BrainSense Streaming describe the neural recording collected during the real-time streaming of neural signal during therapy setup.
+        BrainSense Streaming allow simultaneous bilateral recording if both hemisphere are configured, but only one channel at a time.
+        In addition, only Sensing-friendly configuration (E00-E02, E01-E03, E00-E03) are allowed to minimize effect of stimulation artifacts.
+        Often time, users may start BrainSense Streaming and adjust stimulation parameters to see effect of stimulation on the brain signal.
+      </p>
+      <p>
+        For multi-channel recordings without stimulation, user may refer to <a href="#section-indefinitestreaming">Indefinite Streaming</a> section.
+      </p>
+    </section>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-6 mb-3">
+        <a href="{% static 'images/BrainSenseStreaming.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/BrainSenseStreaming.png' %}" alt="" title="Figure 6.1. BrainSense Streaming Overview."></img>
+        </a>
+      </div>
+		</div>
+  </header>
+
+  <section class="docs-section" id="section-brainsensestreaming-selector">
+    <h2 class="section-heading">Select Recording to View</h2>
+    <p>
+      Similar to BrainSense Survey, BrainSense Streaming data are aggregated for all patients.
+      Recordings are organized by date of collection. The platform will also attempt to merge simultaneous Left/Right hemisphere recordings into one recording if detected.
+      An example of the selection table is shown in Figure 6.2.
+    </p>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-6 mb-3">
+        <a href="{% static 'images/StreamingSelector.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/StreamingSelector.png' %}" alt="" title="Figure 6.2. BrainSense Streaming Selection Table."></img>
+        </a>
+      </div>
+		</div>
+    <p>
+      As shown, if recording contain both Left and Right hemisphere, the table will display information for both in one single row.
+      The table provide essential information regarding the recording, such as recording duration and therapy configurations.
+    </p>
+    <div class="callout-block callout-block-warning">
+      <div class="content">
+        <h4 class="callout-title">
+          <span class="callout-icon-holder me-1">
+            <i class="fas fa-bullhorn"></i>
+          </span>
+          Warning
+        </h4>
+        <p>
+           The only information require manual update is Stimulation Mode (Ring Stimulation vs Segmented A, B, C) because Percept Session file does not store those information in the recording data.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="docs-section" id="section-brainsensestreaming-summary">
+    <h2 class="section-heading">Neural Recording Summary</h2>
+    <p>
+      Once a user selected "View" in Selection Table, data will be processed in the server and transmitted to the web application for display.
+      The display for a typical bilateral recording in shown in Figure 6.4 and unilateral in Figure 6.3.
+      All figures provided in the graph are interactive with x-axis alignment fixed. All time are presented based on user's local timezone.
+    </p>
+    <p>
+      Time alignemnt with bilataral recording can be easily identified via Red Box 3 in Figure 6.4.
+      The presence of pathological beta activity is supressed unilaterally when unilateral stimulation is turned on for Left and Right separately.
+      The alignment shows that the stimulation artifact align with changes in stimulation parameters.
+    </p>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/StreamingSummaryUnilateral.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/StreamingSummaryUnilateral.png' %}" alt="" title="Figure 6.3. BrainSense Streaming Bilateral Overview."></img>
+        </a>
+      </div>
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/StreamingSummaryBilateral.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/StreamingSummaryBilateral.png' %}" alt="" title="Figure 6.4. BrainSense Streaming Unilateral Overview."></img>
+        </a>
+      </div>
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/StreamingExport.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/StreamingExport.png' %}" alt="" title="Figure 6.5. BrainSense Streaming Typical Export Excel."></img>
+        </a>
+      </div>
+		</div>
+    <p>
+      User may choose to export the raw data via Red Box 1 in Figure 6.4. The export will generate a CSV file easily loaded in any scientific programming languages.
+      The data are aligned if left and right hemisphere both present in the recording. Timestamp are provided as UTC timestamp in seconds.
+      Aligned stimulation values are provided for identification of stimulation period.
+    </p>
+    <p>
+      The basic summary uses default short-time Fourier Transform (Spectrogram) method to generate Time-Frequency Analysis.
+      However, user can also choose to use Wavelet Transformation (usually more time-consuming) via Red Box 2.
+      Once method is changed, the processed data are cached on the server and available to user in the future.
+    </p>
+    <p>
+      Similarly, user may also choose to use a template matching cardiac filter to remove cardiac artifacts if present.
+      Figure 6.6 and Figure 6.7 shows the performance of the cardiac filter. It selectively remove signal without altering stimulation artifact spikes.
+    </p>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-6 mb-3">
+        <a href="{% static 'images/StreamingCardiacOFF.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/StreamingCardiacOFF.png' %}" alt="" title="Figure 6.6. BrainSense Streaming with Cardiac Artifacts."></img>
+        </a>
+      </div>
+      <div class="col-12 col-md-6 mb-3">
+        <a href="{% static 'images/StreamingCardiacON.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/StreamingCardiacON.png' %}" alt="" title="Figure 6.7. BrainSense Streaming with Cardiac Filter On."></img>
+        </a>
+      </div>
+		</div>
+  </section>
+
+  <section class="docs-section" id="section-brainsensestreaming-stimulation">
+    <h2 class="section-heading">Effect of Stimulation</h2>
+    <p>
+      In the effect of stimulation presentation, the platform will automatically segment period with different level of stimulation and calculate average power spectrum for different stimulation amplitudes.
+      The segments are sorted with increasing amplitude and color gradient indicate a changes of brain signal with increasing stimulation (Figure 6.8).
+    </p>
+    <p>
+      The user may also toggle the switch on top-right of the figure to view segmentation based on contralateral stimulation.
+      For example, this is a bilateral recording with only left hemisphere stimulation. Figure 6.8 shows no changes in stimulation amplitude for right hemisphere.
+      But user may toggle the "Contralateral Reference" switch and calculate power spectrum segmentation based on contralateral stimulation.
+      This may be useful to understand effect of stimulation on contralateral hemisphere.
+    </p>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/StreamingEffectOfStim_Label.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/StreamingEffectOfStim_Label.png' %}" alt="" title="Figure 6.8. BrainSense Streaming Effect of Unilateral Stimulation."></img>
+        </a>
+      </div>
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/StreamingEffectOfStim_Reference.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/StreamingEffectOfStim_Reference.png' %}" alt="" title="Figure 6.9. BrainSense Streaming Effect of Contralateral Stimulation."></img>
+        </a>
+      </div>
+      <div class="col-12 col-md-4 mb-3">
+        <a href="{% static 'images/StreamingAutodetection.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/StreamingAutodetection.png' %}" alt="" title="Figure 6.10. BrainSense Streaming Automatic Detection of Frequency of Interest."></img>
+        </a>
+      </div>
+		</div>
+  </section>
+</article>
+
+<article class="docs-article active" id="section-indefinitestreaming">
+  <header class="docs-header">
+    <h1 class="docs-heading"> Indefinite Streaming View
+      <span class="docs-time">Last updated: 2022-05-27</span>
+    </h1>
+    <section class="docs-intro">
+      <p>
+        Indefinite Streaming is similar to BrainSense Streaming, but it doesn't come with stimulation parameters nor other labels.
+        In exchange for that, the device allows simultaneous recording up to 6 channels at the same time (Bilateral E00-E02, E01-E03, and E00-E03).
+        We align all recordings collected at the same time and perform quick time-frequency analysis display to the user
+      </p>
+    </section>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-6 mb-3">
+        <a href="{% static 'images/IndefiniteStreamOverview.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/IndefiniteStreamOverview.png' %}" alt="" title="Figure 7.1. Indefinite Streaming Overview."></img>
+        </a>
+      </div>
+		</div>
+  </header>
+
+  <section class="docs-section" id="section-indefinitestreaming-summary">
+    <h2 class="section-heading">Select Recording to View</h2>
+    <p>
+      The recording selection is performed through toggle buttons. Each button indicate the time and duration of the recording.
+      After recordings are selected, user can retrieve the data from server, and simple display will be used to allow interactive visualization of Indefinite Streaming data (Figure 6.1).
+    </p>
+    <p>
+      Since there are no extra label provided by neurostimulator. User may use external label such as biosensors or questionaires to indicate events.
+      Data can be exported similar to BrainSense Streaming.
+    </p>
+  </section>
+
+  <section class="docs-section" id="section-indefinitestreaming-multiple">
+    <h2 class="section-heading">Multiple Selection</h2>
+    <p>
+      The toggle selection actually allow multiple selection.
+      User can select multiple recording from the same day and visualize them on the same time-axis.
+      Segment without data will be leave as blank.
+    </p>
+    <p>
+      Figure 7.2 shows an example of recording separated by one hour but presented on the same axis.
+      Figure is edited to highlight the major difference from Figure 7.1.
+    </p>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-6 mb-3">
+        <a href="{% static 'images/IndefiniteStreamMultipleSelection.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/IndefiniteStreamMultipleSelection.png' %}" alt="" title="Figure 7.2. Indefinite Streaming Multiple Selection."></img>
+        </a>
+      </div>
+		</div>
+  </section>
+</article>
+
+<article class="docs-article active" id="section-chroniclfps">
+  <header class="docs-header">
+    <h1 class="docs-heading"> Chronic Local Field Potential (LFP) View
+      <span class="docs-time">Last updated: 2022-05-31</span>
+    </h1>
+    <section class="docs-intro">
+      <p>
+        Chronic LFP records specific spectral power every 10 minutes when the patient is using a therapy group with BrainSense capability enabled.
+        LFPs are collected in a manner similar to the example structure below in <code>DiagnosticData.LFPTrendLogs</code> field.
+        The LFP Trend Log divides recording into Left/Right hemisphere, and groups arrays of samples by date.
+        Each sample contains a timestamp, a LFP measurment (integer, arbituary unit), and instananeous stimulation amplitude measurement.
+      </p>
+      <div class="callout-block callout-block-warning">
+        <div class="content">
+          <h4 class="callout-title">
+            <span class="callout-icon-holder me-1">
+              <i class="fas fa-bullhorn"></i>
+            </span>
+            Note
+          </h4>
+          <p>
+            It is important to note that <code>DiagnosticData.LFPTrendLogs</code> doesn't contain any important therapeutic information beside amplitude.
+            The most significant difficulty in interpreting the result is actually assigning proper therapy information to each sample collected.
+          </p>
+        </div>
+      </div>
+      <div class="docs-code-block pb-0">
+        <pre class="rounded">
+          <code class="json hljs">
+    "LFPTrendLogs": {
+      "HemisphereLocationDef.Right": {
+        ...,
+        "2022-01-11T13:51:24Z": [
+          ...,
+        	{
+            "DateTime": "2022-01-11T16:11:44Z",
+            "LFP": 1179,
+            "AmplitudeInMilliAmps": 2.5
+        	},
+          ...
+        ],
+        ...
+      }
+    }
+          </code>
+        </pre>
+      </div>
+      <p>
+        In addition to the power sample collected every 10 minutes, there is also another similar Chronic neural recording capability available that capture brain signal every time a patient trigger a recording.
+        This is known as the Patient Event Power Spectral Density (PSD).
+        The available patient events are stored in <code>PatientEvents</code> structure.
+        The recorded patient events are stored in <code>DiagnosticData.LfpFrequencySnapshotEvents</code> structure similar to shown below.
+      </p>
+
+      <div class="docs-code-block pb-0">
+        <pre class="rounded">
+          <code class="json hljs">
+    "LfpFrequencySnapshotEvents": [
+      ...,
+      {
+        "DateTime": "2021-02-17T19:37:16Z",
+        "EventID": 1,
+        "EventName": "Dyskinesia",
+        "LFP": true,
+        "Cycling": false
+      },
+      {
+        "DateTime": "2021-02-18T14:35:23Z",
+        "EventID": 4,
+        "EventName": "Tremor",
+        "LFP": false,
+        "Cycling": false
+      },
+      ...,
+      {
+        "DateTime": "2021-06-10T19:41:58Z",
+        "EventID": 1,
+        "EventName": "Dyskinesia",
+        "LFP": true,
+        "Cycling": false,
+        "LfpFrequencySnapshotEvents": {
+          "HemisphereLocationDef.Right": {
+            "DateTime": "2021-06-10T19:42:28Z",
+            "GroupId": "GroupIdDef.GROUP_C",
+            "SenseID": "",
+            "FFTBinData": [...],
+            "Frequency": [...],
+          },
+          "HemisphereLocationDef.Left": {...}
+        },
+        ...,
+    ]
+          </code>
+        </pre>
+      </div>
+      <div class="simplelightbox-gallery row mb-3">
+        <div class="col-12 col-md-6 mb-3">
+          <a href="{% static 'images/ChronicLFPOverview1.png' %}">
+            <img class="figure-img img-fluid shadow rounded" src="{% static 'images/ChronicLFPOverview1.png' %}" alt="" title="Figure 8.1a. Chronic LFP Overview."></img>
+          </a>
+        </div>
+        <div class="col-12 col-md-6 mb-3">
+          <a href="{% static 'images/ChronicLFPOverview2.png' %}">
+            <img class="figure-img img-fluid shadow rounded" src="{% static 'images/ChronicLFPOverview2.png' %}" alt="" title="Figure 8.1b. Chronic LFP and Event Additional Analysis."></img>
+          </a>
+        </div>
+  		</div>
+    </section>
+  </header>
+
+  <section class="docs-section" id="section-chroniclfps-summary">
+    <h2 class="section-heading">Chronic LFPs Summary</h2>
+    <p>
+      Figure 8.1a shows a typical aggregated chronic LFP recordings over multiple months. Patient Events are overlayed on the ChronicLFP trend at corresponding time.
+      As mentioned above, different therapeutic group or sensing setting can lead to different interpretation of the signal.
+      In this example, the initial segments of recordings are collected with 67.38Hz as the primary BrainSense frequency, which has significantly lower power than the following recording that collect the 24.41Hz power.
+      The exact therapy configurations can be identified using cursor hover.
+    </p>
+    <div class="simplelightbox-gallery row mb-3">
+      <div class="col-12 col-md-6 mb-3">
+        <a href="{% static 'images/ChronicLFPGammaHover.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/ChronicLFPGammaHover.png' %}" alt="" title="Figure 8.2a. Chronic LFP Hover example (Gamma Group)."></img>
+        </a>
+      </div>
+      <div class="col-12 col-md-6 mb-3">
+        <a href="{% static 'images/ChronicLFPBetaHover.png' %}">
+          <img class="figure-img img-fluid shadow rounded" src="{% static 'images/ChronicLFPBetaHover.png' %}" alt="" title="Figure 8.2b. Chronic LFP Hover Example (Beta Group)."></img>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="docs-section" id="section-chroniclfps-circadian">
+    <h2 class="section-heading">Circadian Rhythms</h2>
+    <p>
+      Circadian Rhythm is one of the additional processing examples for Chronic LFP recordings (Figure 8.1b, top-left).
+      The circadian rhythm calculation divide all Chronic LFP samples based on therapy settings and sensing settings, then calculated 24-hour trend of brain signal.
+      This graph demonstrates changes in brain signal between awake state and sleep state.
+      In addition, consistent medication cycles will also show up on the graph.
+    </p>
+  </section>
+
+    <section class="docs-section" id="section-chroniclfps-eventlockpower">
+      <h2 class="section-heading">Event-locked Power Trend</h2>
+      <p>
+        Event-locked Power Trend (Figure 8.1b, top-right) allow user to visualize power 3 hours before and after onset of an event.
+        This is especially helpful for understanding changes in power with respect to medications or symptoms.
+      </p>
+    </section>
+
+  <section class="docs-section" id="section-chroniclfps-events">
+    <h2 class="section-heading">Event Power Spectrum</h2>
+    <p>
+      Patient Events that contains PSDs will be averaged within group and compare to other events (Figure 8.1b, bottom-left).
+      The shaded area is one standard-error from mean.
+    </p>
+    <p>
+      Number of sample is usually different from event-locked power trend because not every recorded event contain PSD snapshot.
+    </p>
+  </section>
+
+</article>
+{% endblock %}

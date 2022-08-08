@@ -1,0 +1,460 @@
+{% extends 'dashboard_basic.html' %}
+{% load static %}
+
+{% block pageTitle %} Authorize Research Access - Percept Analysis Platform {% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+    <li class="breadcrumb-item text-sm">
+      <a class="text-white" href="javascript:;">
+        <i class="ni ni-app"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+    <li class="breadcrumb-item text-sm text-white active">Admin</li>
+  </ol>
+  <h6 class="font-weight-bolder mb-0 text-white">Research Access Permission</h6>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-sm-6 mb-4">
+    <label class="form-label">Choose Research Account to Modify</label>
+    <select class="form-control" name="ResearchAccountSelection" id="ResearchAccountSelection" onchange="UpdatePermissionList()">
+      {% for user in ResearchUserList %}
+        <option value="{{user.ID}}">{{user.Username}} ({{user.FirstName}} {{user.LastName}})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-sm-6 mb-4">
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-6 col-12">
+    <div class="card">
+      <div class="card-header">
+        <div class="d-flex align-items-center">
+          <h5 class="mb-0 text-capitalize">Patient List</h5>
+          <button class="btn btn-sm bg-gradient-dark ms-auto mb-0" onclick="checkAll('PatientList')"> Allow All </button>
+        </div>
+        <form class="input-group mt-2" autocomplete="off">
+          <span class="input-group-text text-body"><i class="fas fa-search" aria-hidden="true"></i></span>
+          <input type="text" class="form-control" placeholder="Filter Patient List" onfocus="focused(this)" onfocusout="defocused(this)" onkeyup="filterPatientList(this.value)">
+        </form>
+      </div>
+      <div class="card-body pt-0 mb-4" style="max-height: 500px; overflow-y: auto;">
+        <ul id="PatientList" class="list-group list-group-flush" data-toggle="checklist" style="overflow: hidden;">
+          {% for patient in PatientList %}
+          <li id="{{patient.ID}}-Row" class="checklist-entry list-group-item px-0">
+            <div class="checklist-item checklist-item-success checklist-item-checked d-flex">
+              <div class="checklist-info">
+                <a href="javascript:viewPatientData('{{patient.FirstName}} {{patient.LastName}}','{{patient.ID}}')" class="btn-link text-sm mb-0" onclick="">{{patient.FirstName}} {{patient.LastName}}</a>
+                <small class="text-xxs">{{patient.Diagnosis}}</small>
+              </div>
+              <div class="form-check my-auto ms-auto">
+                <input id="{{patient.ID}}" data-listid="{{patient.ID}}-Row"
+                       data-diagnosis="{{patient.Diagnosis}}" data-firstname="{{patient.FirstName}}" data-lastname="{{patient.LastName}}"
+                       class="form-check-input" type="checkbox" onclick="togglePatientPermission(this);" />
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6 col-12">
+    <div class="card">
+      <div class="card-header">
+        <div class="d-flex align-items-center">
+          <h5 id="RecordingListTitle" class="mb-0 text-capitalize">Recording List</h5>
+          <button class="btn btn-sm bg-gradient-dark ms-auto mb-0" onclick="allowAllRecordings()"> Allow All </button>
+        </div>
+      </div>
+      <div class="card-body pt-0">
+        <ul id="RecordingList" class="list-group list-group-flush" data-toggle="checklist" style="display: none;">
+          <li id="TherapyHistoryPermission" class="checklist-entry list-group-item px-0">
+            <div class="checklist-item checklist-item-success checklist-item-checked d-flex">
+              <div class="form-check my-auto">
+                <input id="TherapyHistoryPermission-Input"
+                       class="form-check-input" onclick="toggleRecordingPermission(this)" type="checkbox" />
+              </div>
+              <div class="checklist-info ms-2">
+                <h5 class="text-sm mb-0">Therapy History</h5>
+                <small id="TherapyHistoryPermissionEndDate" class="text-xs"></small>
+              </div>
+              <button class="btn btn-xs bg-gradient-danger ms-auto py-0 my-0" data-bs-toggle="modal" data-bs-target="#AdvanceEditModal" onclick="populateAdvanceEditModal('TherapyHistory');"> Advance Edit </button>
+            </div>
+          </li>
+          <li id="BrainSenseSurveyPermission" class="checklist-entry list-group-item px-0">
+            <div class="checklist-item checklist-item-success checklist-item-checked d-flex">
+              <div class="form-check my-auto">
+                <input id="BrainSenseSurveyPermission-Input"
+                       class="form-check-input" onclick="toggleRecordingPermission(this)" type="checkbox" />
+              </div>
+              <div class="checklist-info ms-2">
+                <h5 class="text-sm mb-0"> BrainSense Survey </h5>
+                <small id="BrainSenseSurveyPermissionEndDate" class="text-xs"></small>
+              </div>
+              <button class="btn btn-xs bg-gradient-danger ms-auto py-0 my-0" data-bs-toggle="modal" data-bs-target="#AdvanceEditModal" onclick="populateAdvanceEditModal('BrainSenseSurvey');"> Advance Edit </button>
+            </div>
+          </li>
+          <li id="BrainSenseStreamPermission" class="checklist-entry list-group-item px-0">
+            <div class="checklist-item checklist-item-success checklist-item-checked d-flex">
+              <div class="form-check my-auto">
+                <input id="BrainSenseStreamPermission-Input"
+                       class="form-check-input" onclick="toggleRecordingPermission(this)" type="checkbox" />
+              </div>
+              <div class="checklist-info ms-2">
+                <h5 class="text-sm mb-0"> BrainSense Stream </h5>
+                <small id="BrainSenseStreamPermissionEndDate" class="text-xs"></small>
+              </div>
+              <button class="btn btn-xs bg-gradient-danger ms-auto py-0 my-0" data-bs-toggle="modal" data-bs-target="#AdvanceEditModal" onclick="populateAdvanceEditModal('BrainSenseStream');"> Advance Edit </button>
+            </div>
+          </li>
+          <li id="IndefiniteStreamPermission" class="checklist-entry list-group-item px-0">
+            <div class="checklist-item checklist-item-success checklist-item-checked d-flex">
+              <div class="form-check my-auto">
+                <input id="IndefiniteStreamPermission-Input"
+                       class="form-check-input" onclick="toggleRecordingPermission(this)" type="checkbox" />
+              </div>
+              <div class="checklist-info ms-2">
+                <h5 class="text-sm mb-0"> Indefinite Stream </h5>
+                <small id="IndefiniteStreamPermissionEndDate" class="text-xs"></small>
+              </div>
+              <button class="btn btn-xs bg-gradient-danger ms-auto py-0 my-0" data-bs-toggle="modal" data-bs-target="#AdvanceEditModal" onclick="populateAdvanceEditModal('IndefiniteStream');"> Advance Edit </button>
+            </div>
+          </li>
+          <li id="ChronicLFPsPermission" class="checklist-entry list-group-item px-0">
+            <div class="checklist-item checklist-item-success checklist-item-checked d-flex">
+              <div class="form-check my-auto">
+                <input id="ChronicLFPsPermission-Input"
+                       class="form-check-input" onclick="toggleRecordingPermission(this)" type="checkbox" />
+              </div>
+              <div class="checklist-info ms-2">
+                <h5 class="text-sm mb-0"> Chronic LFPs </h5>
+                <small id="ChronicLFPsPermissionEndDate" class="text-xs"></small>
+              </div>
+              <button class="btn btn-xs bg-gradient-danger ms-auto py-0 my-0" data-bs-toggle="modal" data-bs-target="#AdvanceEditModal" onclick="populateAdvanceEditModal('ChronicLFPs');"> Advance Edit </button>
+            </div>
+          </li>
+        </ul>
+
+        <div class="modal fade" id="AdvanceEditModal" tabindex="-1" role="dialog">
+          <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+            <div class="modal-content">
+              <div class="modal-body p-0">
+                <div class="card card-plain">
+                  <div class="card-header pb-0 text-left">
+                    <h3 id="AdvanceEditModalTitle" class="font-weight-bolder text-danger text-gradient">Advance Edit</h3>
+                    <p id="AdvanceEditModalDescription" class="mb-0">Detail Permission Configuration</p>
+                  </div>
+                  <div class="card-body">
+                    <form role="form text-left">
+                      <label>Recording Accessible Date Range</label>
+                      <div class="input-group mb-3">
+                        <input id="ModalTimeRangeSelector" class="form-control date-range-selector" placeholder="Please select date" type="text" onfocus="focused(this)" onfocusout="defocused(this)">
+                      </div>
+                      <div style="max-height: 300px; overflow-y: auto;">
+                        <ul id="DetailRecordingList" class="list-group list-group-flush" data-toggle="checklist" style="overflow: hidden;">
+                        </ul>
+                      </div>
+                      <div class="text-center">
+                        <button type="button" class="btn btn-round bg-gradient-info btn-lg w-100 mt-4 mb-0">Update</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'js/plugins/choices.min.js' %}"></script>
+<script src="{% static 'js/plugins/flatpickr.min.js' %}"></script>
+<script>
+
+$(document).ready(function() {
+  document.getElementById('researchAccessNav').classList.add("active")
+  const surveySelector = new Choices(document.getElementById("ResearchAccountSelection"), {
+    shouldSort: false
+  });
+  UpdatePermissionList()
+  filterPatientList("")
+
+  document.getElementById("ModalTimeRangeSelector").value = ""
+  $(".date-range-selector").flatpickr({
+    monthSelectorType: "static",
+    mode: "range",
+    dateFormat: "Y-m-d",
+    showMonths: 3
+  });
+})
+
+async function UpdatePermissionList() {
+  const dropdownmenu = document.getElementById("ResearchAccountSelection")
+
+  let formData = new FormData();
+  formData.append("Request", "AuthorizedPatientList");
+  formData.append("ResearchAccount", dropdownmenu.value);
+  const response = await fetch(window.location.origin + "/admin/authorize_access", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    var checkboxes = document.getElementById("PatientList").getElementsByTagName("input");
+    for (var i = 0; i < checkboxes.length; i++) {
+      checkboxes[i].checked = false
+    }
+    document.getElementById("RecordingList").style.display = "none";
+
+    var data = await response.json()
+    for (var i = 0; i < data.length; i++) {
+      document.getElementById(data[i]["ID"]).checked = true
+    }
+  }
+}
+
+async function togglePatientPermission(el) {
+  const dropdownmenu = document.getElementById("ResearchAccountSelection")
+
+  if (el.checked) {
+    let formData = new FormData();
+    formData.append("Request", "TogglePatientPermission");
+    formData.append("Permission", "Allow");
+    formData.append("ResearchAccount", dropdownmenu.value);
+    formData.append("PatientID", el.id);
+    const response = await fetch(window.location.origin + "/admin/authorize_access", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+    if (response.status != 200) {
+      el.checked = false
+    } else {
+      viewPatientData(el.dataset.firstname + " " + el.dataset.lastname, el.id)
+    }
+  } else {
+    let formData = new FormData();
+    formData.append("Request", "TogglePatientPermission");
+    formData.append("Permission", "Deny");
+    formData.append("ResearchAccount", dropdownmenu.value);
+    formData.append("PatientID", el.id);
+    const response = await fetch(window.location.origin + "/admin/authorize_access", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+    if (response.status != 200) {
+      el.checked = true
+    }
+  }
+}
+
+async function toggleRecordingPermission(el) {
+  const researcherID = document.getElementById("ResearchAccountSelection").value
+  const patientID = document.getElementById("RecordingList").dataset.id
+
+  if (el.checked) {
+    let formData = new FormData();
+    formData.append("Request", "ToggleRecordingPermission");
+    formData.append("Permission", "Allow");
+    formData.append("RecordingType", el.id.replace("Permission-Input",""));
+    formData.append("ResearchAccount", researcherID);
+    formData.append("PatientID", patientID);
+    const response = await fetch(window.location.origin + "/admin/authorize_access", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+    if (response.status != 200) {
+      el.checked = false
+    } else {
+      patientData = await response.json()
+    }
+  } else {
+    let formData = new FormData();
+    formData.append("Request", "ToggleRecordingPermission");
+    formData.append("Permission", "Deny");
+    formData.append("RecordingType", el.id.replace("Permission-Input",""));
+    formData.append("ResearchAccount", researcherID);
+    formData.append("PatientID", patientID);
+    const response = await fetch(window.location.origin + "/admin/authorize_access", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+    if (response.status != 200) {
+      el.checked = true
+    } else {
+      patientData = await response.json()
+    }
+  }
+}
+
+async function toggleIndividualPermission(el) {
+  const researcherID = document.getElementById("ResearchAccountSelection").value
+  const patientID = document.getElementById("RecordingList").dataset.id
+
+  if (el.checked) {
+    let formData = new FormData();
+    formData.append("Request", "ToggleIndividualPermission");
+    formData.append("Permission", "Allow");
+    formData.append("RecordingID", el.dataset.recordingid);
+    formData.append("ResearchAccount", researcherID);
+    formData.append("PatientID", patientID);
+    formData.append("DeviceID", el.dataset.device);
+    const response = await fetch(window.location.origin + "/admin/authorize_access", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+    if (response.status != 200) {
+      el.checked = false
+    }
+  } else {
+    let formData = new FormData();
+    formData.append("Request", "ToggleIndividualPermission");
+    formData.append("Permission", "Deny");
+    formData.append("RecordingID", el.dataset.recordingid);
+    formData.append("ResearchAccount", researcherID);
+    formData.append("PatientID", patientID);
+    formData.append("DeviceID", el.dataset.device);
+    const response = await fetch(window.location.origin + "/admin/authorize_access", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+    if (response.status != 200) {
+      el.checked = true
+    }
+  }
+}
+
+function allowAllRecordings() {
+  var allRecordings = [document.getElementById("TherapyHistoryPermission-Input"), document.getElementById("BrainSenseSurveyPermission-Input"),
+                document.getElementById("BrainSenseStreamPermission-Input"), document.getElementById("IndefiniteStreamPermission-Input"),
+                document.getElementById("ChronicLFPsPermission-Input")]
+
+  var allChecked = true
+  for (var i = 0; i < allRecordings.length; i++) {
+    if (!allRecordings[i].checked && !allRecordings.indeterminate) {
+      allChecked = false
+    }
+  }
+
+  for (var i = 0; i < allRecordings.length; i++) {
+    if (allChecked) {
+      allRecordings[i].checked = false
+      allRecordings[i].indeterminate = false
+      toggleRecordingPermission(allRecordings[i])
+    } else if (!allRecordings[i].checked && !allRecordings[i].indeterminate) {
+      allRecordings[i].checked = true
+      toggleRecordingPermission(allRecordings[i])
+    }
+  }
+}
+
+var recording_description = `
+<li id="{recording.ID}-Row" class="checklist-entry list-group-item px-0">
+  <div class="checklist-item checklist-item-success checklist-item-checked d-flex">
+    <div class="checklist-info">
+      <h5 class="text-sm mb-0">{recording.device} {recording.type}</h5>
+      <small class="text-xxs">{recording.date}</small>
+    </div>
+    <div class="form-check my-auto ms-auto">
+      <input id="{recording.ID}-Input" data-recordingid="{recording.ID}"
+             data-type="{recording.type}" data-device="{recording.device}"
+             class="form-check-input" onclick="toggleIndividualPermission(this)" type="checkbox" {checked} />
+    </div>
+  </div>
+</li>
+`
+
+var patientData;
+async function viewPatientData(patientName, patientID) {
+  const dropdownmenu = document.getElementById("ResearchAccountSelection")
+
+  let formData = new FormData();
+  formData.append("Request", "AuthorizedRecordingList");
+  formData.append("ResearchAccount", dropdownmenu.value);
+  formData.append("PatientID", patientID);
+  const response = await fetch(window.location.origin + "/admin/authorize_access", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    patientData = await response.json()
+
+    document.getElementById("TherapyHistoryPermissionEndDate").innerHTML = formatDateString(getTimestring(patientData["TimeRange"]["TherapyHistory"][1]*1000), "Permission End Date: {%B} {%D}, {%Y}")
+    document.getElementById("BrainSenseSurveyPermissionEndDate").innerHTML = formatDateString(getTimestring(patientData["TimeRange"]["BrainSenseSurvey"][1]*1000), "Permission End Date: {%B} {%D}, {%Y}")
+    document.getElementById("BrainSenseStreamPermissionEndDate").innerHTML = formatDateString(getTimestring(patientData["TimeRange"]["BrainSenseStream"][1]*1000), "Permission End Date: {%B} {%D}, {%Y}")
+    document.getElementById("IndefiniteStreamPermissionEndDate").innerHTML = formatDateString(getTimestring(patientData["TimeRange"]["IndefiniteStream"][1]*1000), "Permission End Date: {%B} {%D}, {%Y}")
+    document.getElementById("ChronicLFPsPermissionEndDate").innerHTML = formatDateString(getTimestring(patientData["TimeRange"]["ChronicLFPs"][1]*1000), "Permission End Date: {%B} {%D}, {%Y}")
+
+    var overview = {TherapyHistory: [0,0], BrainSenseSurvey: [0,0], BrainSenseStream: [0,0], IndefiniteStream: [0,0], ChronicLFPs: [0,0]}
+    for (var j = 0; j < patientData["Recordings"].length; j++) {
+      overview[patientData["Recordings"][j]["Type"]][0] += 1
+      if (patientData["Recordings"][j]["Authorized"]) {
+        overview[patientData["Recordings"][j]["Type"]][1] += 1
+      }
+    }
+
+    var checkboxes = document.getElementById("RecordingList").getElementsByTagName("input");
+    for (var i = 0; i < checkboxes.length; i++) {
+      var type = checkboxes[i]["id"].replace("Permission-Input","")
+      if (overview[type][1] > 0) {
+        if (overview[type][1] == overview[type][0]) {
+          checkboxes[i].checked = true
+          checkboxes[i].indeterminate = false
+        } else {
+          checkboxes[i].checked= false
+          checkboxes[i].indeterminate = true
+        }
+      } else {
+        checkboxes[i].checked= false
+        checkboxes[i].indeterminate= false
+      }
+
+    }
+
+    document.getElementById("RecordingListTitle").innerHTML = patientName;
+    document.getElementById("RecordingList").style.display = "";
+    document.getElementById("RecordingList").dataset.id = patientID;
+  }
+}
+
+function populateAdvanceEditModal(type) {
+  document.getElementById("AdvanceEditModalTitle").innerHTML = "Advance Edit"
+  document.getElementById("AdvanceEditModalDescription").innerHTML = "Permission of " + type
+
+  document.querySelector("#ModalTimeRangeSelector")._flatpickr.clear()
+  document.querySelector("#ModalTimeRangeSelector")._flatpickr.setDate([new Date(patientData["TimeRange"][type][0]*1000), new Date(patientData["TimeRange"][type][1]*1000)])
+
+  if (patientData["TimeRange"][type][0] == 0) {
+    var dates = document.getElementById("ModalTimeRangeSelector").value.split(" to ")
+    document.getElementById("ModalTimeRangeSelector").value = "Any Date to " + dates[1]
+  }
+
+  document.getElementById("DetailRecordingList").innerHTML = ""
+  var displayList = ""
+  for (var i = 0; i < patientData["Recordings"].length; i++) {
+    var rowInfo = recording_description
+    if (patientData["Recordings"][i]["Type"] == type) {
+      rowInfo = rowInfo.replaceAll("{recording.device}", patientData["Recordings"][i]["Device"]).replaceAll("{recording.ID}", patientData["Recordings"][i]["ID"]).replaceAll("{recording.type}", patientData["Recordings"][i]["Type"]).replaceAll("{recording.date}", new Date(patientData["Recordings"][i]["Date"]*1000))
+      if (patientData["Recordings"][i]["Authorized"]) {
+        rowInfo = rowInfo.replaceAll("{checked}","checked=''")
+      } else {
+        rowInfo = rowInfo.replaceAll("{checked}","")
+      }
+      displayList += rowInfo
+    }
+  }
+  document.getElementById("DetailRecordingList").innerHTML = displayList
+}
+
+function filterPatientList(keyword) {
+  var checkboxes = document.getElementById("PatientList").getElementsByTagName("input");
+  for (var i = 0; i < checkboxes.length; i++) {
+    if (keyword == "" || checkboxes[i].dataset.diagnosis.includes(keyword) || checkboxes[i].dataset.firstname.includes(keyword) || checkboxes[i].dataset.lastname.includes(keyword)) {
+      document.getElementById(checkboxes[i].dataset.listid).style.display = "";
+    } else {
+      document.getElementById(checkboxes[i].dataset.listid).style.display = "none";
+    }
+  }
+}
+
+function filterRecordingList(keyword) {
+  var checkboxes = document.getElementById("RecordingList").getElementsByTagName("input");
+  for (var i = 0; i < checkboxes.length; i++) {
+    if (keyword == "" || checkboxes[i].dataset.type.includes(keyword) || checkboxes[i].dataset.device.includes(keyword)) {
+      document.getElementById(checkboxes[i].dataset.listid).style.display = "";
+    } else {
+      document.getElementById(checkboxes[i].dataset.listid).style.display = "none";
+    }
+  }
+}
+
+</script>
+{% endblock %}

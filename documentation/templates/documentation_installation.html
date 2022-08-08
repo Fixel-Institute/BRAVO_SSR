@@ -1,0 +1,549 @@
+{% extends 'documentation_installation_nav.html' %}
+{% load static %}
+
+{% block article %}
+<article class="docs-article active" id="section-introduction">
+  <header class="docs-header">
+    <h1 class="docs-heading"> Introduction
+      <span class="docs-time">Last updated: 2021-11-25</span>
+    </h1>
+    <section class="docs-intro">
+      <p>
+      </p>
+    </section>
+    <section class="docs-prereq">
+
+    </section>
+  </header>
+  <footer class="footer">
+    <div class="container text-left pt-2 pb-3">
+      <small class="copyright">
+        © <script>
+          document.write(new Date().getFullYear())
+        </script>,
+        by Jackson Cagle @ Norman Fixel Insitute for Neurological Diseases.
+      </small>
+    </div>
+  </footer>
+</article>
+
+<article class="docs-article active" id="section-installation-linux">
+  <header class="docs-header">
+    <h1 class="docs-heading"> Installation for Linux
+      <span class="docs-time">Last updated: 2021-11-25</span>
+    </h1>
+    <section class="docs-intro">
+      <p>
+        The procedure described here are tested on Ubuntu 20.04 LTS with source file directly clone through GitHub. 
+        The procedure here are describing for both HTTP deployment (internal use only) and HTTPS deployment (public release). 
+        If you intend to deploy this software for public, I highly recommend using Linux deployment procedure for HTTPS. 
+        This tutorial will also cover for procedure to setup Amazon Web Service Elastic Cloud Compute (EC2) platform to work with Django Project.
+       </p>
+    </section>
+  </header>
+  <section class="docs-section" id="section-linux-prereq">
+    <h2 class="section-heading">Prerequisite</h2>
+    <p>
+      <b>1. Python 3.7 or above</b>
+    </p> 
+    <p>
+      Additional required packages will all be installed during the installation script, therefore not listed. 
+      It is also noted that the default Python distribution on Ubuntu 18.04 is Python 3.6, therefore not satisfying the requirement. 
+      You need to either manually update the Python distribution so that <code>python3 --version</code> is up-to-date or use Ubuntu 20.04 LTS, which comes with Python 3.8.
+    </p>
+
+    <p>
+      All procedure assume that your working directory is the main directory of the cloned Git folder 
+      (i.e.: <code>/home/ubuntu/BRAVO_SSR</code>).
+    </p> 
+    <p>
+      In addition, it is recommended to manually create a SECRET_KEY variable for Django. 
+      You can either manually edit Line 20 of 
+      <a href="https://github.com/Fixel-Institute/BRAVO_SSR/blob/main/LICENSE.md">install.sh</a> 
+      to put your own secret key, 
+      or use <code>export</code> command in bash command line to create that manually.
+    </p>
+  </section>
+
+  <section class="docs-section" id="section-linux-database">
+    <h2 class="section-heading">1. SQL Database</h2>
+
+    <p>
+      SQL Database will be used to store account information, patient entries, device entries, and various recording information. 
+      Due to the data size, neural recordings are not directly stored in database, but instead stored locally in binary format at the DataStorage folder. 
+      A data pointer that associate local files with patient recording will be stored in database for ease-of-access. 
+    </p>
+    <p>
+      SQL Database will require manual creation prior to main server installation unless an existing database is used. 
+      You can access MySQL Database (the default database used for the installation script, but other database can be used.)
+    </p>
+    <pre class="rounded" style="margin-bottom: 0;">
+      <code class="bash">
+  sudo mysql -u root
+  # this would prompt you to enter admin password here for superuser privilege.
+
+  # Following commands are within mysql command-line-interface
+  # Create database named "PerceptServer"
+  mysql> CREATE DATABASE PerceptServer;
+
+  # Create a user that can access the database called "DjangoUser" with an admin password called "AdminPassword"
+  # Change these values to what you see fit.
+  mysql> CREATE USER 'DjangoUser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'AdminPassword';
+  mysql> GRANT ALL PRIVILEGES ON PerceptServer.* TO 'DjangoUser'@'localhost';
+  mysql> FLUSH PRIVILEGES;
+
+  # exit MySQL Interface 
+  mysql> exit
+      </code>
+    </pre>
+    <p>
+      Once the account is set-up and database is created. You can edit the 
+      <a href="https://github.com/Fixel-Institute/BRAVO_SSR/blob/main/LICENSE.md">mysql.config</a> 
+      file to reflect actual accses credential for your database.
+    </p>
+  </section>
+  <section class="docs-section" id="section-linux-procedure">
+    <h2 class="section-heading">2. Installation Procedure</h2>
+    <p>
+      Change permission to the installation script to "can execute",and run the script as a shell script. 
+      The shell script will install other important dependencies first, so admin permission is required.
+    </p>
+
+    <pre class="rounded" style="margin-bottom: 0;">
+      <code class="bash">
+  sudo chmod +x ./install.sh
+  ./install.sh
+  # Installation script would prompt you to enter admin password here for superuser privilege.
+      </code>
+    </pre>
+    <p>
+      During installation, 4 variables are required for configurations. 
+    </p>
+    <p>
+      First, a default admin username (email) and password is asked. 
+      It is not "required" as the system can operate without any admin account.
+
+      But for users who do not want to manually promote a new account as admin, 
+      this allow easy creation of one admin account for the platform. 
+
+      If you decide to skip through these configurations, a standard Admin account will still be created, 
+      except that the password is going to be cryptic due to random generator.
+    </p>
+    <p>
+      Then, the path to the DataStorage folder will be asked. 
+      This is defined as an empty directory for storing all Percept data and processed data. 
+      It is recommended to use a backup-enabled folder (such as a folder synced with HIPAA Compliant Dropbox or OneDrive server). 
+      This directory will be created by the installation script if a non-existing directory is given.
+    </p>
+    <p>
+      Lastly, a server IP address is required by the user. 
+      It is recommended to put your external static IP here for Django Server setup. 
+      If you are going to use localhost only, leave it as <b>localhost</b> will be fine.
+    </p>
+    <p>
+      During the auto-installation process, bash script will create a Python Virtual Environment called PerceptPlatformEnv 
+      and place it in the same root directory as Django project. 
+      
+      Necessary Python packages (dependencies) will be installed. 
+      Then, the script will create a WSGI file (more about it later) called <code>wsgi_production.py</code> in <i>PerceptServer_Pro</i> folder. 
+      
+      This file will serve as main entry point for Apache Server to run Django file, 
+      therefore, it will store all information you configured as environment variables for Python. 
+    </p>
+    <div class="callout-block callout-block-danger">
+      <div class="content">
+        <h4 class="callout-title">
+          <span class="callout-icon-holder me-1">
+            <i class="fas fa-exclamation-triangle"></i>
+          </span>
+          IMPORTANT
+        </h4>
+        <p>
+          <b>DO NOT SHARE <code>wsgi_production.py</code>, AS IT CONTAINS YOUR SECRET KEY AS WELL</b>. 
+        </p>
+      </div>
+    </div>
+    <p>
+      Afterward, it will also create a production configuration file for Apache 2 Server automatically 
+      while disable the default Apache 2 virtual host and enable Percept Analysis Platform in your virtual host.
+    </p>
+    <p>
+      Last bit of the installation script will perform clean up, 
+      such as creating static folders, giving Apache 2 permissions to your Django folder and your DataStorage folder.
+    </p>
+  </section>
+
+  <section class="docs-section" id="section-linux-deploy">
+    <h2 class="section-heading">Deployment</h2>
+    <p>
+      This section primarily focus on deployment of the Percept Analysis Platform on AWS EC2 instance. 
+      This procedure, however, will not cover details for best-practice for HIPAA compliance. For details, 
+      you may visit AWS's <a href="https://aws.amazon.com/compliance/hipaa-compliance/">HIPAA Compliance Page</a>.
+    </p> 
+    <p>
+      Deploying Django project in AWS is a common practice and there are many different resources online for this. 
+      Majority of the works needed (such as configuration for httpd and virtual hosts) are done in the installation script already, 
+      so the procedure here described mainly from a AWS Server setup point-of-view.
+    </p>
+
+    <h3>Amazon Web Service - Elastic Compute Cloud</h3>
+    <p>
+      Once you register your AWS Account, you can create your own Amazon EC2 instances. 
+      If this is the first time you use AWS, you will be offered free trial using their T2.micro or T3.micro 
+      (1 vCPU, 1G RAM) for free for 750 hours (essentially, 24/7 for a month) per month. 
+      However, it is recommended not to use those, as the Percept Analysis Platform hungers for computational power, 
+      and data above 600 seconds continuous data (such as commonly the Indefinite Streams) will likely lead to CPU lock at 99.9%.
+    </p>
+    <p>
+      In the demo shared by the author, BRAVO Platform is operating on a C6gn.large instance 
+      (2 3.60GHz vCPU, 4G RAM), which is sufficient for dozens of users as long as not concurrently processing 
+      significantly large files (such as hour-long medication wash-in wash-out recordings). 
+      Typical hourly-averaged CPU load is less than 0.05%, with processing of significantly large file (1 hour duration Indefinite Streaming) 
+      cost about 5% hourly-averaged CPU load. This instance is more than sufficient for individual clinics, 
+      but not for a general public server that support multiple clinics and research institutes. 
+      That being said, C6gn.large is chosen as demo because it is sufficient for demo with a significantly 
+      lower price than high-end instances ($0.034 per hour). The room for growth is large, given a 16 vCPU version of C5 instance 
+      (C5.4xlarge), cost only $0.68 per hour but will be more than sufficient to host a couple institutes. 
+      Cheaper variant of computation optimized server is also available through ARM-based processor, 
+      which offer 40% better price performance than typical x86 instances. The BRAVO Platform is compatible with both x86 image 
+      and ARM-based image.
+    </p>
+    <p>
+      Another factor to consider is the hard-drive. 
+      Typically, Percept JSON file do not take up much space, but factoring into pre-processed time-frequency data and various cache files, 
+      the size storage can be a few fold larger. As a reference, for 850 JSON files totaling with 2.60GB storage takes about 
+      7.0GB additional as cache files. This being said, non-research Percept JSON are usually significantly smaller, 
+      and Fixel Institute at University of Florida generate about 3.0GB JSON file over the span of one year. 
+      Given the simplicity of expanding AWS Storage, it is good to budget around 20G storage first and expand as needed.
+    </p>
+    <p>
+      Lastly, the Amazon Machine Image is recommended with Ubuntu 20.04 LTS as it naturally support all requirement 
+      for the Percept Analysis Platform. Installation on a brand new image is simply running the installation script.
+    </p>
+
+    <h3>Amazon Web Service - Security Group</h3>
+    <p>
+      Creating your own AWS Instance, clone the project, and run the installation script will automatically setup everything 
+      for the Percept Analysis Platform to work. This includes public access through HTTP in debug mode. 
+      By default, <code>DEBUG=True</code>, which will allow display of error messages that give you an idea about 
+      why some requests do not go through if a 404/500 Network Error occur.
+    </p>
+    <p>
+      Once the server is ready, you need to configure AWS EC2 instance's Security Group to allow HTTP access at Port 80. 
+      To do so, navigate to <code>EC2 -> Instances -> %YOUR_INSTANCE_ID% -> Security -> %YOUR_SECURITY_GROUPS_ID%</code>. 
+      By default, only Port 22 is enabled (for SSH Access). You can <b>Edit Inbound Rules</b> to include 2 additional protocols:
+    </p>
+    <pre class="rounded" style="margin-bottom: 0;">
+      <code class="bash">
+  Protocol 1:
+  Type: HTTP
+  Port: 80
+  Source: Anywhere-IPv4
+  
+  Protocol 2:
+  Type: HTTP
+  Port: 80
+  Source: Anywhere-IPv6
+      </code>
+    </pre>
+
+    <p>
+      These rules will grant you access to view your platform in HTTP with debug. 
+      Now you can simply navigate to your browser and see the website from <b>http://%YOUR_INSTANCE_EXTERNAL_IPv4%/</b>. 
+      If you see Django error page about that IP address is not allowed, it is most likely you entered a wrong IP address 
+      during installation or somehow your IP address changed (Dynamic IPs). 
+      Look at <b>PerceptServer_Pro/wsgi_production.py</b> and find <code>os.environ["SERVER_ADDRESS"]</code> and change the value to your new IP address.
+    </p>
+
+    <h3>Amazon Web Service - Elastic IPs</h3>
+    <p>
+      However, if you do not allocate a static IP through Elastic IPs, your external IP address could change with time 
+      (especially when restarting instances). Allocation is easy, the best option is to just allocate one from Amazon's Pool IPv4. 
+      Then associate that IP with your running EC2 instance. The association is usually fast and will be ready within minutes. 
+      After new IP is selected, go back to the previous section and follow the procedure to change your SERVER_ADDRESS to the new IP address.
+    </p>
+
+    <h3>Amazon Web Service - Application Load Balancer and Route 53</h3>
+    <p>
+      However, that is only reasonable within the institute or during development. 
+      The best practice is to configure DEBUG=False with a public SSL-certificate for HTTPS access and remove all debug pages. 
+      Register a AWS Application Load Balancer from EC2 Dashboard and add 2 listeners:
+    </p>
+    <pre class="rounded" style="margin-bottom: 0;">
+      <code class="bash">
+  Protocol: HTTP
+  Port: 80
+  Add Action: Forward to -> Target Group (Target Group is your Django Security Group)
+  
+  Protocol: HTTPS
+  Port: 443
+  Add Action: Forward to -> Target Group (Target Group is your Django Security Group)
+      </code>
+    </pre>
+
+    <p>
+      Noted that if you configure HTTPS, AWS will require you to provide a SSL-certificate, 
+      which you can generate using AWS's Free Public-SSL service, given that you have your domains ready. 
+      You can go to AWS Certificate Manager -> Request a public certificate. Though validations varies, you usually use 
+      DNS validation if you registered your domain through AWS Route 53.
+    </p>
+    <p>
+      Once certificate is obtained and HTTPS Load Balancer is configured, you can now create a hosted zone for your domain 
+      (even if you do not have the domain registered through AWS, you can still use the Hosted Zone service). 
+      Create a Type A routing from your domain record to the load balancer you created. Once everything is setup in Route 53 
+      and Load Balancer, you can now modify the <b>PerceptAnalysis/settings.py</b> file to include your new domain in Line 43: 
+      <code>ALLOWED_HOSTS = ["localhost", os.environ.get('SERVER_ADDRESS'), "%YOUR_DOMAIN_NAME%"]</code>, 
+      and change <code>DEBUG=True</code> to <code>DEBUG=False</code>.
+    </p>
+    <p>
+      Now that everything is configured, you will be able to access the website you setup through 
+      <b>https://%YOUR_DOMAIN_NAME%/</b>. All network traffics will be routing through HTTPS at Port 443 from now on.
+    </p>
+  </section>
+</article>
+
+<article class="docs-article active" id="section-installation-windows">
+  <header class="docs-header">
+    <h1 class="docs-heading"> Installation for Windows
+      <span class="docs-time">Last updated: 2021-11-25</span>
+    </h1>
+    <section class="docs-intro">
+      <p>
+        The procedure described here are tested on Windows 10 Home OS (Build 19043.1348) with source file directly 
+        clone through GitHub Desktop. The procedure here are describing solely for HTTP deployment (internal use only). 
+        
+        If you intend to deploy this software for public, I highly recommend using Linux deployment procedure for HTTPS. 
+        Tutorials are available for Amazon Web Service Elastic Cloud Compute (EC2) platform.
+
+        Installation of Percept Analysis Platform on Windows is definitely more complicated than a full-controlled Linux Installation script. 
+        Much of the contents require manual editing in different locations that could give rise to errors. 
+        However, Windows remains to be the most common operating system right now and it is likely that the research institutes or 
+        clinics do not have high-computation Linux Computer. In those scenario, we would like to ensure that Windows User 
+        have access to our platform as well, so we develop this installation tutorial for Django Project with Windows Apache.
+       </p>
+    </section>
+  </header>
+  <section class="docs-section" id="section-windows-prereq">
+    <h2 class="section-heading">Prerequisite</h2>
+    <p>
+      <b>1. Python 3.70 or above (Anaconda Python Distribution is ok, but the same privilege limitation apply).</b>
+    </p> 
+    <p>
+      <b>2. Apache Server and MySQL Database (XAMPP).</b>
+    </p>
+  </section>
+
+  <section class="docs-section" id="section-windows-database">
+    <h2 class="section-heading">1. SQL Database</h2>
+    <p>
+      SQL Database will be used to store account information, patient entries, device entries, and various recording information. 
+      Due to the data size, neural recordings are not directly stored in database, but instead stored locally in binary format at the DataStorage folder. 
+      A data pointer that associate local files with patient recording will be stored in database for ease-of-access. 
+    </p>
+    <p>
+      SQL Database will require manual creation prior to main server installation unless an existing database is used. 
+      You can access MySQL Database (the default database used for the installation script, but other database can be used.) through the following method. 
+      MySQL Database is installed along with Apache through XAMPP. 
+    </p>
+    <pre class="rounded" style="margin-bottom: 0;">
+      <code class="bash">
+  # In Windows Command Prompt, where %XAMPP_PATH% is the full path to your XAMPP installation folder. 
+  %XAMPP_PATH%\mysql.exe -u root
+  # this would prompt you to enter admin password here for superuser privilege.
+
+  # Following commands are within mysql command-line-interface
+  # Create database named "PerceptServer"
+  mysql> CREATE DATABASE PerceptServer;
+
+  # Create a user that can access the database called "DjangoUser" with an admin password called "AdminPassword"
+  # Change these values to what you see fit.
+  mysql> CREATE USER 'DjangoUser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'AdminPassword';
+  mysql> GRANT ALL PRIVILEGES ON PerceptServer.* TO 'DjangoUser'@'localhost';
+  mysql> FLUSH PRIVILEGES;
+
+  # exit MySQL Interface 
+  mysql> exit
+      </code>
+    </pre>
+    <p>
+      <a href="https://hevodata.com/learn/xampp-mysql/">This link</a> share a detail tutorial on creating the database without using command-line. 
+    </p>
+    <p>
+      Once the account is set-up and database is created. You can edit the 
+      <a href="https://github.com/Fixel-Institute/BRAVO_SSR/blob/main/LICENSE.md">mysql.config</a> 
+      file to reflect actual accses credential for your database.
+    </p>
+  </section>
+  <section class="docs-section" id="section-windows-procedure">
+    <h2 class="section-heading">2. Installation Procedure</h2>
+    <p>
+      All procedure assume that your working direcctory is the main directory of the cloned Git folder 
+      (i.e.: <code>C:\Users\Username\Documents\GitHub\PerceptAnalysis_Server</code>).
+    </p>
+    <p>
+      <b>It is highly recommended to have Python installed with administrator privilege. </b>
+      This allow Apache Server service to be run as Local System Account, instead of being tied to a specific account. 
+      For use with specific account, additional steps are required (see below).
+    </p>
+
+    <h3>a. Python Environment Setup</h3>
+    <p>
+      Open Command Prompt as administrator (or not, if you are using it with specific account), 
+      verify with <code>python --version</code> that the installed Python Version is above 3.70 
+      (minimum version required for DateTime conversion for Percept JSON structure). 
+      Install Python Virtual Environment tool with PyPI. 
+    </p>
+
+    <p>
+      Install virtual environment with virtualenv. 
+      The following steps will install PerceptPlatformEnv folder in the Django root folder along with other server-side codes. 
+      Doing this instead of installing Python Environment at a shared location allow easier navigations and configurations for Apache. 
+      Once install, verified that you see (<b>PerceptPlatformEnv</b>) prepend to your command line prompt.
+      Then you can install dependencies package in the new environment
+    </p>
+
+    <pre class="rounded" style="margin-bottom: 0;">
+      <code class="bash">
+  # In Anaconda Prompt, or Command Prompt, depends on how your Python is installed. 
+  pip install virtualenv
+  virtualenv PerceptPlatformEnv
+  PerceptPlatformEnv\Scripts\activate.bat
+  pip install django djangorestframework numpy scipy pandas spectrum mysqlclient requests websocket-client joblib
+      </code>
+    </pre>
+
+    <h3>b. Django Settinngs and WSGI Settings</h3>
+    <p>
+      Navigate to <b>PerceptPlatform/wsgi_windows.py</b> file. 
+      Temporary environment variables are setup already for placeholder. 
+      The most important edit is to ensure <b><i>SERVER_DIRECTORY</i></b> is correctly labeled, 
+      it should be the path to your Django root folder (i.e.: <code>C:\Users\Username\Documents\GitHub\PerceptAnalysis_Server</code>). 
+      Leave <i>PERCEPT_DIR</i> and <i>STATIC_ROOT</i> unmodified, but change <b><i>SERVER_ADDRESS</i></b> to your computer's 
+      Private IPv4 address (internal network). 
+      Change <i>DATASERVER_PATH</i> to a backup-enabled folder (such as a folder synced with HIPAA Compliant Dropbox or OneDrive server).
+    </p>
+
+    <div class="callout-block callout-block-danger">
+      <div class="content">
+        <h4 class="callout-title">
+          <span class="callout-icon-holder me-1">
+            <i class="fas fa-exclamation-triangle"></i>
+          </span>
+          IMPORTANT
+        </h4>
+        <p>
+          If Apache Server is setup with Local System Account, it cannot access Network Resources. 
+          If you decide to put DATASERVER_PATH as one of the Windows Share Folders, 
+          create a dedicated account for your domain and follow the <a href="#section-windows-deploy">procedure</a> below to configure Apache Server service account. 
+          However, this procedure is not tested by the author and is subjected to modifications.
+        </p>
+      </div>
+    </div>
+
+    <p>
+      Afterward, ensure all neccessary files are setup by running the following Django Comamnds:
+    </p>
+    <pre class="rounded" style="margin-bottom: 0;">
+      <code class="bash">
+  # In Anaconda Prompt, or Command Prompt, using "PerceptPlatformEnv" virtual environment
+  python manage.py makemigrations
+  python manage.py migrate
+  python manage.py collectstatic
+      </code>
+    </pre>
+
+    <p>
+      After that is done, try to start the Percept Analysis Platform on localhost to confirm all Python packages are installed without errors. 
+      Make sure <b>PerceptServer_Pro/settings.py</b> file has <code>DEBUG = True</code> (line 33) configured, otherwise the website will not function until 
+      Apache Server is setup to serve static files. You can view the platform on <a href="http://localhost:8000/">localhost:8000</a>.
+    </p>
+    <pre class="rounded" style="margin-bottom: 0;">
+      <code class="bash">
+  # In Anaconda Prompt, or Command Prompt, using "PerceptPlatformEnv" virtual environment
+  python manage.py runserver
+      </code>
+    </pre>
+
+    <h3>c. Apache Server Setup</h3>
+    <p>
+      The Apache Server used in this example is the XAMPP (Apache Friend) for easy-to-use GUI. 
+      Many different network development distributions are available in the same package, but only Apache is needed in this case. 
+      The default installation folder is usually <code>C:/xampp</code>, which is how we will refer to in this section.
+    </p>
+    <p>
+      Once XAMPP installation is done, confirm Apache Server is in <code>C:/xampp/apache</code> folder. 
+      Now, we need to create an environment variable that point to the Apache Server for Python modules. 
+      Create an environment variable called  <code>MOD_WSGI_APACHE_ROOTDIR</code> and set its value to <code>C:/xampp/apache</code>. 
+      <b>[System Properties -> Environment Variables... -> System Variables -> New...]</b>
+    </p>
+    <p>
+      Return back to the command prompt, now install mod_wsgi package for Python. 
+      You may need to restart command prompt so the new Environment Variable is registered, otherwise mod_wsgi building will have errors.
+    </p>
+    <pre class="rounded" style="margin-bottom: 0;">
+      <code class="bash">
+  # In Anaconda Prompt, or Command Prompt, using "PerceptPlatformEnv" virtual environment
+  pip install mod_wsgi
+      </code>
+    </pre>
+
+    <p>
+      Once mod_wsgi is installed, verify the module configuration with command <code>mod_wsgi-express module-config</code> 
+      and copy its content (except the <b>WSGIPythonHome</b>) to <code>C:/xampp/apache/conf/httpd.conf</code>. It should look like something below.
+    </p>
+    <pre class="rounded" style="margin-bottom: 0;">
+      <code class="bash">
+  # In Anaconda Prompt, or Command Prompt, using "PerceptPlatformEnv" virtual environment
+  mod_wsgi-express module-config
+
+  # Expect the following output:
+  LoadFile "C:/Program Files/Python310/python310.dll"
+  LoadModule wsgi_module "C:/Users/Username/Documents/GitHub/BRAVO_SSR/PerceptPlatformEnv/lib/site-packages/mod_wsgi/server/mod_wsgi.cp310-win_amd64.pyd"
+      </code>
+    </pre>
+
+    <p>
+      Now, configure the <b>httpd-vhosts.conf</b> file in the cloned directory. The following information are needed:
+    </p>
+
+    <h6> 1. ServerName </h6>
+    <p>
+      Change <i>localhost</i> to the IP address you set for <i>SERVER_ADDRESS</i> in <b>PerceptAnalysis/wsgi_windows.py</b> file.
+    </p>
+
+    <h6> 2. Directory Path </h6>
+    <p>
+      Essentially, all occurrence of <code>C:/Users/Username/Documents/GitHub/PerceptAnalysis_Server</code> in the template file 
+      should be changed to where you store your cloned Django root folder. 
+      This occur multiple times in the file, make sure they are all changed (Line 3, Line 5, Line 6, Line 10, Line 17) 
+      but make sure their suffix folders or filename are untouched.
+    </p>
+    <p>
+      Now that all contents are changed, copy <b>httpd-vhosts.conf</b> file to <code>C:/xampp/apache/conf/extra/httpd-vhosts.conf</code>
+      and replace the original file (the original file has no actual content, 
+      so you can simply copy the text content of your modified file and append at the end of the original file as well).
+    </p>
+  </section>
+
+  <section class="docs-section" id="section-windows-deploy">
+    <h2 class="section-heading">Deployment</h2>
+    <p>
+      Open XAMPP as Administrator, this will allow you to install Apache as a Windows Service. 
+      If you do not wish to have Apache as Windows Service, you can open it as local user. 
+      If you are Admin, you can see a red cross mark to the left of Apache module, clicking it will install Apache Windows Service. 
+      If not, clicking Start to the right of Apache will start Apache in Port 80 (HTTP) and Port 443 (HTTPS) with your application configurations. 
+      You can now view your data through <code>http://%SERVER_ADDRESS%/</code> (registration may be required or you can use the admin account you set up during installation).
+    </p> 
+    <p>
+      For Python installed on individual user, 
+      Apache will most likely have no permission to view your Python executable when used as Local System Account, 
+      and therefore lead to error in deployment as Windows Service (most typically, <code>Fatal Python error: initfsencoding: 
+      unable to load the file system codec ModuleNotFoundError: No module named 'encodings'</code>). 
+      For this situation, open Windows Service tab and Right click on Apache service <code>ApacheX.Y</code> (sub X and Y to your Apache version) 
+      and view <code>Properties</code>. Go to <code>Log On</code> tab and specify a specific account using <code>This Account</code> option instead of <code>Local System Account</code>. 
+      This is also the same place where you can input a domain account to access Network Resources.
+    </p>
+  </section>
+</article>
+
+{% endblock %}

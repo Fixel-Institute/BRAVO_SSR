@@ -1,0 +1,447 @@
+{% extends 'dashboard_basic.html' %}
+{% load static %}
+
+{% block pageTitle %} Therapy History - Percept Analysis Platform {% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+    <li class="breadcrumb-item text-sm">
+      <a class="text-white" href="javascript:;">
+        <i class="ni ni-app"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/patients">Patients</a></li>
+    <li class="breadcrumb-item text-sm text-white active" aria-current="page"><a class="opacity-5 text-white" href="/patientOverview">{{Patient.Name}}</a></li>
+  </ol>
+  <h6 class="font-weight-bolder mb-0 text-white">BrainSense Surveys</h6>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12 mb-4">
+    <div class="card z-index-2 h-100">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <h6 class="text-capitalize">Therapy History</h6>
+        <div id="progressSpiner" class="container">
+          <div class="row justify-content-center">
+            <div class="spinner-border text-default" role="status">
+              <span class="sr-only">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="therapyHistoryChart" class="chart" style="height:400px;" oncontextmenu="return false;">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-4 col-lg-3">
+    <div class="card position-sticky top-1">
+      <ul id="TherapyDateNav" class="nav flex-column bg-white border-radius-lg p-3">
+      </ul>
+    </div>
+  </div>
+  <div class="col-8 col-lg-9">
+    <div id="therapyAccordion" class="accordion">
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="therapyConfigurationModal" tabindex="-99" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Detail Therapy Configuration</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div id="therapyConfigurationContent" class="modal-body">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block contextmenu %}
+<div id="contextMenuWrapper">
+  <input id="timestampInput" type="number" value=0 hidden></input>
+  <span id="historyChartContext" data-toggle="dropdown"></span>
+  <div class="dropdown-menu dropdown-menu-animation dropdown-md dropdown-md-responsive p-3 border-radius-lg mt-0 mt-lg-3" style="box-shadow: 2px 2px 2px 2px;" aria-labelledby="dropdownMenuBlocks">
+    <ul class="list-group">
+      <li class="nav-item dropdown dropdown-hover dropdown-subitem list-group-item border-0 p-0">
+        <a class="dropdown-item py-2 ps-3 border-radius-md" href="javascript:getPlotlyClick();">
+          <div class="d-flex">
+            <div class="w-100 d-flex align-items-center justify-content-between">
+              <div>
+                <p class="dropdown-header text-dark p-0">View Detail Therapy Settings</p>
+              </div>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li class="nav-item dropdown dropdown-hover dropdown-subitem list-group-item border-0 p-0">
+        <a class="dropdown-item py-2 ps-3 border-radius-md" href="#">
+          <div class="d-flex">
+            <div class="w-100 d-flex align-items-center justify-content-between">
+              <div>
+                <p class="dropdown-header text-dark p-0">View Event Counts</p>
+              </div>
+            </div>
+          </div>
+        </a>
+      </li>
+    </ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.plot.ly/plotly-2.8.3.min.js"></script>
+<script>
+
+$(document).ready(function() {
+  document.getElementById('therapyHistoryNavbar').classList.add("active")
+  requestTherapyData()
+
+  $('#therapyHistoryChart').mousedown(function(event) {
+    if (event.which == 3) {
+      var chart = document.getElementById("therapyHistoryChart");
+      var startTime = new Date(chart.layout.xaxis.range[0]);
+      var endTime = new Date(chart.layout.xaxis.range[1]);
+      var positionX = (event.originalEvent.layerX-80)/(chart._initialAutoSize.width - 145-80)
+      document.getElementById("timestampInput").value = (endTime-startTime)/1000*positionX + startTime/1000
+
+      $("#historyChartContext").css({position: "absolute", top:event.clientY, left:event.clientX}).dropdown('toggle');
+    } else {
+      $("#historyChartContext").dropdown('hide');
+    }
+  });
+
+  $(document).click(function (event) {
+    $('#historyChartContext').dropdown('hide');
+  });
+})
+
+var therapyDetailTable = `
+<li class="list-group-item border-0 d-flex p-4 mb-2 bg-gray-100 border-radius-lg">
+  <div class="d-flex flex-column col-6">
+    <h6 class="mb-3 text-sm">{DEVICENAME} {DATE} {HEMISPHERE}</h6>
+    <span class="mb-2 text-xs text-dark font-weight-bold ms-sm-2">{CHANNEL}{1}</span>
+    <span class="mb-2 text-xs">Frequency: <span class="text-dark font-weight-bold ms-sm-2">{FREQUENCY}{1} Hz</span></span>
+    <span class="mb-2 text-xs">Pulsewidth: <span class="text-dark ms-sm-2 font-weight-bold">{PULSEWIDTH}{1} μS</span></span>
+    <span class="text-xs">Amplitude: <span class="text-dark ms-sm-2 font-weight-bold">{AMPLITUDE}{1} {UNIT}{1}</span></span>
+  </div>
+  <div class="d-flex flex-column col-6 {HIDDEN}">
+    <h6 class="mb-3 text-sm mt-auto"></h6>
+    <span class="mb-2 text-xs text-dark font-weight-bold ms-sm-2">{CHANNEL}{2}</span>
+    <span class="mb-2 text-xs">Frequency: <span class="text-dark font-weight-bold ms-sm-2">{FREQUENCY}{2} Hz</span></span>
+    <span class="mb-2 text-xs">Pulsewidth: <span class="text-dark ms-sm-2 font-weight-bold">{PULSEWIDTH}{2} μS</span></span>
+    <span class="text-xs">Amplitude: <span class="text-dark ms-sm-2 font-weight-bold">{AMPLITUDE}{2} {UNIT}{2}</span></span>
+  </div>
+</li>
+`
+
+function showTherapyDetails(therapy, device, hemisphere) {
+  var clickedTimestamp = document.getElementById("timestampInput").value * 1000
+
+  var therapyConfigurationDetails = therapyDetailTable;
+  if (typeof therapy["Frequency"] === "number") {
+    therapyConfigurationDetails = therapyConfigurationDetails.replace("{HIDDEN}", "d-none")
+    therapyConfigurationDetails = therapyConfigurationDetails.replaceAll("{DATE}", formatDateString(getTimestring(clickedTimestamp),"{%B} {%D}, {%Y}")).replaceAll("{DEVICENAME}", device).replaceAll("{HEMISPHERE}", hemisphere)
+    therapyConfigurationDetails = therapyConfigurationDetails.replace("{FREQUENCY}{1}", therapy["Frequency"]).replace("{PULSEWIDTH}{1}", therapy["PulseWidth"]).replace("{AMPLITUDE}{1}", therapy["Amplitude"]).replace("{UNIT}{1}", therapy["Unit"])
+    therapyConfigurationDetails = therapyConfigurationDetails.replace("{CHANNEL}{1}", therapy["Channel"])
+  } else {
+    therapyConfigurationDetails = therapyConfigurationDetails.replace("{HIDDEN}", "d-block")
+    therapyConfigurationDetails = therapyConfigurationDetails.replaceAll("{DATE}", formatDateString(getTimestring(clickedTimestamp),"{%B} {%D}, {%Y}")).replaceAll("{DEVICENAME}", device).replaceAll("{HEMISPHERE}", hemisphere)
+    for (var i = 0; i < therapy["Frequency"].length; i++) {
+      therapyConfigurationDetails = therapyConfigurationDetails.replace("{FREQUENCY}{"+(i+1)+"}", therapy["Frequency"][i]).replace("{PULSEWIDTH}{"+(i+1)+"}", therapy["PulseWidth"][i]).replace("{AMPLITUDE}{"+(i+1)+"}", therapy["Amplitude"][i]).replace("{UNIT}{"+(i+1)+"}", therapy["Unit"][i])
+      therapyConfigurationDetails = therapyConfigurationDetails.replace("{CHANNEL}{"+(i+1)+"}", therapy["Channel"][i])
+    }
+  }
+
+  return therapyConfigurationDetails
+}
+
+function getPlotlyClick() {
+  document.getElementById("therapyConfigurationContent").innerHTML = ""
+
+  var list = document.createElement("ul")
+  list.classList.add("list-group")
+
+  var clickedTimestamp = document.getElementById("timestampInput").value
+  var tableRows = ""
+  for (var i = 0; i < therapyData["TherapyChangeLogs"].length; i++) {
+    for (var j = therapyData["TherapyChangeLogs"][i]["date_of_change"].length-1; j > 0; j--) {
+      if (therapyData["TherapyChangeLogs"][i]["date_of_change"][j] / 1000000000 < clickedTimestamp) {
+        if (therapyData["TherapyChangeLogs"][i]["therapy"][j].hasOwnProperty("LeftHemisphere")) {
+          tableRows += showTherapyDetails(therapyData["TherapyChangeLogs"][i]["therapy"][j]["LeftHemisphere"], therapyData["TherapyChangeLogs"][i]["device_name"], "Left Hemisphere")
+        }
+        if (therapyData["TherapyChangeLogs"][i]["therapy"][j].hasOwnProperty("RightHemisphere")) {
+          tableRows += showTherapyDetails(therapyData["TherapyChangeLogs"][i]["therapy"][j]["RightHemisphere"], therapyData["TherapyChangeLogs"][i]["device_name"], "Right Hemisphere")
+        }
+        break;
+      }
+    }
+  }
+
+  list.innerHTML = tableRows
+  document.getElementById("therapyConfigurationContent").appendChild(list)
+
+  $("#therapyConfigurationModal").modal("show")
+}
+
+var therapyData;
+async function requestTherapyData()
+{
+  let formData = new FormData();
+  formData.append("requestData", '{{PatientID}}');
+  const response = await fetch(window.location.origin + "/report/therapyHistory", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    const  data = await response.json()
+    therapyData = data;
+    if (data.hasOwnProperty("TherapyChangeLogs")) plotly_therapyHistory(data["TherapyChangeLogs"])
+    $('#progressSpiner').hide()
+    if (data.hasOwnProperty("TherapyConfigurations")) populateTherapyConfigurationViews(data["TherapyConfigurations"])
+  }
+}
+
+var dateSelectorTemplate = `
+<a class="nav-link text-body d-flex align-items-center" data-scroll="" href="#{TherapyDateID}">
+  <i class="ni ni-calendar-grid-58 me-2 text-dark opacity-6"></i>
+  <span class="text-sm">{Timestamp}</span>
+</a>`
+
+var accordionTemplate = `
+<h5 class="accordion-header" id="{TherapyDateID}">
+  <button class="accordion-button border-bottom font-weight-bold collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#{collapseID}" aria-expanded="false" aria-controls="collapseOne">
+    {TherapyDate}
+    <i class="collapse-close fa fa-plus text-xs pt-1 position-absolute end-0 me-3" aria-hidden="true"></i>
+    <i class="collapse-open fa fa-minus text-xs pt-1 position-absolute end-0 me-3" aria-hidden="true"></i>
+  </button>
+</h5>
+<div id="{collapseID}" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#therapyAccordion" style="">
+  <div class="accordion-body text-sm opacity-8">
+    {TherapyDetailTables}
+  </div>
+</div>`
+
+var therapyTableTemplate = `
+<div class="card mb-4">
+  <div class="card-header pb-0 p-3">
+    <div class="d-flex justify-content-between">
+      <h6 class="mb-2">{DeviceName}</h6>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table align-items-center ">
+      <tbody>
+        {AllRowContents}
+      </tbody>
+    </table>
+  </div>
+</div>`
+
+var sweetalertTableTemplate = `
+<table class="table align-items-center ">
+  <tbody>
+    {AllRowContents}
+  </tbody>
+</table>
+`
+
+var therapyTableRowTemplate = `
+<tr>
+  <td class="w-30">
+    <div class="d-flex px-2 py-1 align-items-center">
+      <div class="ms-4">
+        <p class="text-xs font-weight-bold mb-0">Group ID:</p>
+        <h5 class="text-sm mb-0">
+          {GROUPNAME} {GROUPUSAGES}
+        </h5>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div>
+      <p class="text-xs font-weight-bold mb-0">Active Contacts:</p>
+      {CONTACTS}
+    </div>
+  </td>
+  <td>
+    <div>
+      <p class="text-xs font-weight-bold mb-0">Frequency:</p>
+      {FREQUENCY}
+    </div>
+  </td>
+  <td>
+    <div>
+      <p class="text-xs font-weight-bold mb-0">Pulsewidth:</p>
+      {PULSEWIDTH}
+    </div>
+  </td>
+  <td>
+    <div>
+      <p class="text-xs font-weight-bold mb-0">Amplitude:</p>
+      {AMPLITUDE}
+    </div>
+  </td>
+  <td>
+    <div>
+      <p class="text-xs font-weight-bold mb-0">Brain Sense:</p>
+      {BRAINSENSE}
+    </div>
+  </td>
+</tr>`
+
+function populateTherapyConfigurationViews(data)
+{
+  var therapyNavbar = document.getElementById("TherapyDateNav")
+  var therapyAccordion = document.getElementById("therapyAccordion")
+
+  var therapyDates = Object.keys(data)
+  for (var i = therapyDates.length-1; i >= 0; i--)
+  {
+    var selection = document.createElement("li");
+    selection.classList.add(...["nav-item","pb-2"])
+    dateStruct = new Date(therapyDates[i]*1000)
+    var dateSelectorContent = dateSelectorTemplate.replaceAll("{Timestamp}","Before " + formatDateString(dateStruct,"{%B} {%D}, {%Y}"))
+    dateSelectorContent = dateSelectorContent.replaceAll("{TherapyDateID}",formatDateString(dateStruct,"{%B}{%D}_{%Y}"))
+    selection.innerHTML = dateSelectorContent
+    therapyNavbar.appendChild(selection);
+  }
+
+  for (var i = therapyDates.length-1; i >= 0; i--)
+  {
+    var accordion = document.createElement("div")
+    accordion.classList.add(...["accordion-item","mb-3"])
+    var dateStruct = new Date(parseInt(therapyDates[i])*1000)
+    var accordionContent = accordionTemplate.replaceAll("{TherapyDate}", "Before " + formatDateString(dateStruct, "{%B} {%D}, {%Y}"))
+    accordionContent = accordionContent.replaceAll("{collapseID}","Collapse" + formatDateString(dateStruct, "{%Y}_{%B}_{%D}"))
+    accordionContent = accordionContent.replaceAll("{TherapyDateID}",formatDateString(dateStruct,"{%B}{%D}_{%Y}"))
+
+    var allContents = {}
+    for (var j = 0; j < data[therapyDates[i]].length; j++)
+    {
+      if (!allContents.hasOwnProperty(data[therapyDates[i]][j]["Device"])) allContents[data[therapyDates[i]][j]["Device"]] = ""
+      allContents[data[therapyDates[i]][j]["Device"]] += formatRowContent(data[therapyDates[i]][j]["Overview"])
+    }
+
+    var tableInnerHTML = ""
+    var deviceIDs = Object.keys(allContents)
+    for (var j = 0; j < deviceIDs.length; j++)
+    {
+      tableInnerHTML += therapyTableTemplate.replaceAll("{AllRowContents}",allContents[deviceIDs[j]]).replaceAll("{DeviceName}",deviceIDs[j])
+    }
+    accordionContent = accordionContent.replaceAll("{TherapyDetailTables}",tableInnerHTML)
+
+    accordion.innerHTML = accordionContent
+    therapyAccordion.appendChild(accordion)
+  }
+
+}
+
+function formatRowContent(data)
+{
+  var content = therapyTableRowTemplate
+  content = content.replaceAll("{GROUPNAME}", data["GroupName"])
+  content = content.replaceAll("{FREQUENCY}", data["Frequency"])
+  content = content.replaceAll("{PULSEWIDTH}", data["PulseWidth"])
+  content = content.replaceAll("{AMPLITUDE}", data["Amplitude"])
+  content = content.replaceAll("{CONTACTS}", data["Contacts"])
+  content = content.replaceAll("{BRAINSENSE}", data["BrainSense"])
+  content = content.replaceAll("{GROUPUSAGES}", data["DutyPercent"])
+  return content
+}
+
+function plotly_therapyHistory(data)
+{
+  var traces = []
+  for (var i = 0; i < data.length; i++)
+  {
+    var xdata = []
+    var ydata = []
+    for (var j = 0; j < data[i]["new_group"].length; j++)
+    {
+      if (j == 0 || data[i]["previous_group"][j] == "GroupIdDef.GROUP_UNKNOWN")
+      {
+        var date = new Date(data[i]["date_of_change"][j]/1000000)
+        xdata.push(date,date)
+        if (data[i]["new_group"][j] == "GroupIdDef.GROUP_A") ydata.push(0,0)
+        else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_B") ydata.push(1,1)
+        else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_C") ydata.push(2,2)
+        else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_D") ydata.push(3,3)
+      }
+      else if (j > 0 && data[i]["previous_group"][j] != data[i]["new_group"][j-1])
+      {
+        xdata.push(new Date(data[i]["date_of_change"][j]/1000000))
+        ydata.push(null)
+        xdata.push(new Date(data[i]["date_of_change"][j]/1000000))
+        if (data[i]["new_group"][j] == "GroupIdDef.GROUP_A") ydata.push(0)
+        else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_B") ydata.push(1)
+        else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_C") ydata.push(2)
+        else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_D") ydata.push(3)
+      }
+      else
+      {
+        xdata.push(new Date(data[i]["date_of_change"][j]/1000000))
+        if (data[i]["new_group"][j] == "GroupIdDef.GROUP_A") ydata.push(0)
+        else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_B") ydata.push(1)
+        else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_C") ydata.push(2)
+        else if (data[i]["new_group"][j] == "GroupIdDef.GROUP_D") ydata.push(3)
+      }
+    }
+
+    var trace = {
+      x: xdata,
+      y: ydata,
+      type: 'scatter',
+      mode: 'lines',
+      line: {shape: 'hv'},
+      hovertemplate: "  %{x} <br>  %{y} <extra></extra>",
+      name: data[i]["device_name"]
+    }
+    traces.push(trace)
+  }
+
+  var layout = {
+    title: {
+      text: "Therapy Change Logs"
+    },
+    yaxis: {
+      showline: true,
+      ticks: "outside",
+      tickmode: "array",
+      ticktext: ["Group A","Group B","Group C","Group D"],
+      tickvals: [0,1,2,3],
+      range: [-0.5,3.5],
+      zeroline: false,
+    },
+    xaxis: {
+      showline: true,
+      ticks: "outside",
+      zeroline: false,
+      rangeselector: {buttons: [
+        { count: 1, label: '1 Month', step: 'month', stepmode: 'todate' },
+        {step: 'all'}
+      ]},
+    }
+  };
+
+  Plotly.newPlot('therapyHistoryChart', traces, layout);
+}
+
+</script>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends 'documentation_basic.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="page-header theme-bg-dark py-5 text-center position-relative">
+  <div class="theme-bg-shapes-right">
+  </div>
+  <div class="theme-bg-shapes-left">
+  </div>
+  <div class="container">
+    <h1 class="page-heading single-col-max mx-auto">Documentation</h1>
+    <div class="page-intro single-col-max mx-auto">
+      Documentation Overview
+    </div>
+    <div class="main-search-box pt-3 d-block mx-auto">
+      <form class="search-form w-100">
+        <input type="text" placeholder="Search the docs..." name="search" class="form-control search-input">
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="page-content">
+  <div class="container">
+    <div class="docs-overview py-5">
+	    <div class="row justify-content-center">
+		    <div class="col-12 col-lg-4 py-3">
+			    <div class="card shadow-sm">
+				    <div class="card-body">
+					    <h5 class="card-title mb-3">
+						    <span class="theme-icon-holder card-icon-holder me-2">
+                  <i class="fa-brands fa-readme"></i>
+						    </span>
+					      <span class="card-title-text">Overview</span>
+					    </h5>
+					    <div class="card-text">
+						    Brief Overview of currently supported functions. This also includes brief procedure on how to use the site.
+					    </div>
+					    <a class="card-link-mask" href="/documentation/overview"></a>
+				    </div>
+			    </div>
+		    </div>
+		    <div class="col-12 col-lg-4 py-3">
+			    <div class="card shadow-sm">
+				    <div class="card-body">
+					    <h5 class="card-title mb-3">
+						    <span class="theme-icon-holder card-icon-holder me-2">
+                  <i class="fa-solid fa-hammer"></i>
+						    </span>
+					      <span class="card-title-text">Installation</span>
+					    </h5>
+					    <div class="card-text">
+						    Instruction on setting up a clone of this site on your local secure network.
+					    </div>
+					    <a class="card-link-mask" href="/documentation/installation"></a>
+				    </div>
+			    </div>
+		    </div>
+		    <div class="col-12 col-lg-4 py-3">
+			    <div class="card shadow-sm">
+				    <div class="card-body">
+					    <h5 class="card-title mb-3">
+						    <span class="theme-icon-holder card-icon-holder me-2">
+                  <i class="fa-solid fa-box"></i>
+						    </span>
+					      <span class="card-title-text">APIs</span>
+					    </h5>
+					    <div class="card-text">
+						    REST APIs available to fetch data from database.
+					    </div>
+					    <a class="card-link-mask" href="/documentation/installation"></a>
+				    </div>
+			    </div>
+		    </div>
+	    </div>
+    </div>
+    <footer class="footer">
+      <div class="container text-center py-5">
+        <!--/* This template is free as long as you keep the footer attribution link. If you'd like to use the template without the attribution link, you can buy the commercial license via our website: themes.3rdwavemedia.com Thank you for your support. :) */-->
+        <small class="copyright">Designed with <span class="sr-only">love</span><i class="fas fa-heart" style="color: #fb866a;"></i> by <a class="theme-link" href="http://themes.3rdwavemedia.com" target="_blank">Xiaoying Riley</a> for developers</small>
+      </div>
+    </footer>
+  </div>
+</div>
+
+{% endblock %}

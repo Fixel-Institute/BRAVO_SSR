@@ -1,0 +1,102 @@
+{% extends 'dashboard_basic.html' %}
+{% load static %}
+
+{% block pageTitle %} Patient List - Percept Analysis Platform {% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+    <li class="breadcrumb-item text-sm">
+      <a class="text-white" href="javascript:;">
+        <i class="ni ni-app"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+    <li class="breadcrumb-item text-sm text-white active">Patients</li>
+  </ol>
+  <h6 class="font-weight-bolder mb-0 text-white">Patient List</h6>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <!-- Card header -->
+      <div class="card-header">
+        <h5 class="mb-0">Session File List</h5>
+        <p class="text-sm mb-0">
+          This session file list only contain session files uploaded with unique data. If an uploaded session files doesn't contain unique information, that file is not saved.
+        </p>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-flush" id="responsive-session-table">
+          <thead class="thead-light">
+            <tr>
+              <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Device Name</th>
+              <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Session Filename</th>
+              <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Available Recordings</th>
+              <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="display: none;">Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for session in SessionFiles %}
+            <tr id="TableRow{{session.SessionID}}">
+              <td class="text-sm font-weight-normal">{{session.DeviceName}}</td>
+              <td class="text-sm font-weight-normal">{{session.SessionFilename}}</td>
+              <td class="text-sm font-weight-normal">{{session.AvailableRecording | safe}}</td>
+              <td>
+                <div class='text-center text-sm'>
+                  <a class="btn btn-sm btn-info align-middle mb-1 mt-1" href="javascript:viewSession('{{session.SessionID}}')">View</a>
+                  <a class="btn btn-sm btn-danger align-middle mb-1 mt-1" href="javascript:deleteSession('{{session.SessionID}}')">Delete</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'js/plugins/datatables.js' %}"></script>
+<script>
+const sessionTable = new simpleDatatables.DataTable("#responsive-session-table", {
+  searchable: false,
+  fixedHeight: true,
+  perPageSelect: false,
+  perPage: 20,
+});
+
+$(document).ready(function() {
+  document.getElementById('sessionManagementNavbar').classList.add("active")
+})
+
+async function deleteSession(sessionID) {
+  let formData = new FormData();
+  formData.append("deleteSession", '{{PatientID}}');
+  formData.append("session_id", sessionID);
+  const response = await fetch(window.location.origin + "/report/sessionsManagement", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    $("#TableRow"+sessionID).remove()
+  }
+}
+
+async function viewSession(sessionID) {
+  let formData = new FormData();
+  formData.append("viewSession", '{{PatientID}}');
+  formData.append("session_id", sessionID);
+  const response = await fetch(window.location.origin + "/report/sessionsManagement", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    window.location.href = window.location.origin + "/report/sessionReport"
+  }
+}
+
+</script>
+
+{% endblock %}

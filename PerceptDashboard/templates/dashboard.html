@@ -1,0 +1,163 @@
+{% extends 'dashboard_basic.html' %}
+{% load static %}
+
+{% block pageTitle %} Dashboard - Percept Analysis Platform {% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+    <li class="breadcrumb-item text-sm">
+      <a class="text-white" href="javascript:;">
+        <i class="ni ni-app"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item text-sm text-white" active><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+  </ol>
+  <h6 class="font-weight-bolder mb-0 text-white">Dashboard</h6>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-6 col-12 d-flex ms-auto">
+    <a href="javascript:;" class="btn btn-icon btn-outline-white ms-auto">
+      <span class="btn-inner--text">Export</span>
+      <span class="btn-inner--icon ms-2"><i class="ni ni-folder-17"></i></span>
+    </a>
+    <div class="dropleft ms-3">
+      <button class="btn bg-gradient-dark dropdown-toggle" type="button" id="dropdownImport" data-bs-toggle="dropdown" aria-expanded="false">
+        Today
+      </button>
+      <ul class="dropdown-menu" aria-labelledby="dropdownImport">
+        <li><a class="dropdown-item" href="javascript:;">Yesterday</a></li>
+        <li><a class="dropdown-item" href="javascript:;">Last 7 days</a></li>
+        <li><a class="dropdown-item" href="javascript:;">Last 30 days</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
+    <div class="card">
+      <div class="card-body p-3">
+        <div class="row">
+          <div class="col-8">
+            <div class="numbers">
+              <p class="text-sm mb-0 text-uppercase font-weight-bold">Users</p>
+              <h5 class="font-weight-bolder mb-0">
+                930
+                <span class="text-success text-sm font-weight-bolder">+55%</span>
+              </h5>
+            </div>
+          </div>
+          <div class="col-4 text-end">
+            <div class="icon icon-shape bg-gradient-dark shadow text-center border-radius-md">
+              <i class="ni ni-circle-08 text-lg opacity-10" aria-hidden="true"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
+    <div class="card">
+      <div class="card-body p-3">
+        <div class="row">
+          <div class="col-8">
+            <div class="numbers">
+              <p class="text-sm mb-0 text-uppercase font-weight-bold">New Users</p>
+              <h5 class="font-weight-bolder mb-0">
+                744
+                <span class="text-success text-sm font-weight-bolder">+3%</span>
+              </h5>
+            </div>
+          </div>
+          <div class="col-4 text-end">
+            <div class="icon icon-shape bg-gradient-dark shadow text-center border-radius-md">
+              <i class="ni ni-world text-lg opacity-10" aria-hidden="true"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
+    <div class="card">
+      <div class="card-body p-3">
+        <div class="row">
+          <div class="col-8">
+            <div class="numbers">
+              <p class="text-sm mb-0 text-uppercase font-weight-bold">Sessions</p>
+              <h5 class="font-weight-bolder mb-0">
+                1,414
+                <span class="text-danger text-sm font-weight-bolder">-2%</span>
+              </h5>
+            </div>
+          </div>
+          <div class="col-4 text-end">
+            <div class="icon icon-shape bg-gradient-dark shadow text-center border-radius-md">
+              <i class="ni ni-watch-time text-lg opacity-10" aria-hidden="true"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-sm-6">
+    <div class="card">
+      <div class="card-body p-3">
+        <div class="row">
+          <div class="col-8">
+            <div class="numbers">
+              <p class="text-sm mb-0 text-uppercase font-weight-bold">Pages/Session</p>
+              <h5 class="font-weight-bolder mb-0">
+                1.76
+                <span class="text-success text-sm font-weight-bolder">+5%</span>
+              </h5>
+            </div>
+          </div>
+          <div class="col-4 text-end">
+            <div class="icon icon-shape bg-gradient-dark shadow text-center border-radius-md">
+              <i class="ni ni-image text-lg opacity-10" aria-hidden="true"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row mt-4">
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header pb-0">
+        <h6>Upcoming Visits</h6>
+      </div>
+      <div class="card-body p-3">
+        <div class="timeline timeline-one-side" data-timeline-axis-style="dotted">
+          <div class="timeline-block mb-3">
+            <span class="timeline-step">
+              <i class="ni ni-bell-55 text-success text-gradient"></i>
+            </span>
+            <div class="timeline-content">
+              <h6 class="text-dark text-sm font-weight-bold mb-0">Yes, this is just a template</h6>
+              <p class="text-secondary font-weight-bold text-xs mt-1 mb-0">Jan 19, 2022</p>
+              <p class="text-sm mt-3 mb-2">
+                I wonder how long can this line go
+              </p>
+              <span class="badge badge-sm bg-gradient-success">Tag?</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+$(document).ready(function() {
+  document.getElementById('dashboardNav').classList.add("active")
+})
+</script>
+{% endblock %}

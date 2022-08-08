@@ -1,0 +1,726 @@
+{% extends 'dashboard_basic.html' %}
+{% load static %}
+
+{% block pageTitle %} BrainSense Survey - Percept Analysis Platform {% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+    <li class="breadcrumb-item text-sm">
+      <a class="text-white" href="javascript:;">
+        <i class="ni ni-app"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/patients">Patients</a></li>
+    <li class="breadcrumb-item text-sm text-white active" aria-current="page"><a class="opacity-5 text-white" href="/patientOverview">{{Patient.Name}}</a></li>
+  </ol>
+  <h6 class="font-weight-bolder mb-0 text-white">Chronic LFPs</h6>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12 mb-4">
+    <div id="IndefiniteStreamRawCard" class="card z-index-0 h-100" style="display: none;">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <h6 class="text-capitalize">Chronic LFP Trend</h6>
+        <a href="javascript:exportChronicLFPs();" class="btn btn-icon btn-outline-black">
+          <span class="btn-inner--text">Export</span>
+          <span class="btn-inner--icon ms-2"><i class="ni ni-folder-17"></i></span>
+        </a>
+      </div>
+      <div class="card-body p-3">
+        <div id="RawChronicLFP" class="chart" style="height: 200px;">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="CircadianPowerCard" class="col-12 col-lg-6 mb-4" style="display: none;">
+    <div class="card z-index-0 h-100">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <div class="row">
+          <div class="col-6 d-flex align-items-center">
+            <h6 class="text-capitalize">Circadian Rhythms</h6>
+          </div>
+          <div class="col-6 text-end">
+            <div class="dropdown">
+              <button class="btn bg-gradient-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Select Group
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" id="CircadianPowerGroupSelector" style="max-height: 300px; overflow: auto;">
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="CircadianPowerChart" class="chart" style="height: 200px;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="EventLockedPowerCard" class="col-12 col-lg-6 mb-4" style="display: none;">
+    <div class="card z-index-0 h-100">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <div class="row">
+          <div class="col-6 d-flex align-items-center">
+            <h6 class="text-capitalize">Event Locked Power Changes</h6>
+          </div>
+          <div class="col-6 text-end">
+            <div class="dropdown">
+              <button class="btn bg-gradient-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Select Group
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" id="EventLockedPowerGroupSelector" style="max-height: 300px; overflow: auto;">
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="EventLockedPowerChart" class="chart" style="height: 200px;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="PatientEventPSDCard" class="col-12 col-lg-6 mb-4" style="display: none;">
+    <div class="card z-index-0 h-100">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <div class="row">
+          <div class="col-6 d-flex align-items-center">
+            <h6 class="text-capitalize">Group Events</h6>
+          </div>
+          <div class="col-6 text-end">
+            <div class="dropdown">
+              <button class="btn bg-gradient-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Select Group
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" id="PatientEventPSDGroupSelector" style="max-height: 300px; overflow: auto;">
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="PatientEventPSDChart" class="chart" style="height: 200px;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="TherapyPowerAmplitudeCard" class="col-12 col-lg-6 mb-4" style="display: none;">
+    <div class="card z-index-0 h-100">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <div class="row">
+          <div class="col-6 d-flex align-items-center">
+            <h6 class="text-capitalize">Power at each Therapy Amplitude</h6>
+          </div>
+          <div class="col-6 text-end">
+            <div class="dropdown">
+              <button class="btn bg-gradient-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Select Group
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" id="TherapyPowerAmplitudeGroupSelector" style="max-height: 300px; overflow: auto;">
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="TherapyPowerAmplitudeChart" class="chart" style="height: 200px;">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.plot.ly/plotly-2.8.3.min.js"></script>
+<script>
+
+$(document).ready(function() {
+  document.getElementById('chronicLFPNavbar').classList.add("active")
+  requestChronicLFPData()
+})
+
+var chronicData;
+var eventData;
+var eventMarker;
+async function requestChronicLFPData()
+{
+  Swal.fire({
+    title: 'Downloading Data',
+    html: 'Please wait while data are being downloaded',
+    didOpen: () => {
+      Swal.showLoading()
+    },
+    showConfirmButton: false
+  })
+
+  var d = new Date()
+
+  let formData = new FormData();
+  formData.append("requestData", '{{PatientID}}');
+  formData.append("timezoneOffset", d.getTimezoneOffset()*60)
+  const response = await fetch(window.location.origin + "/report/chronicLFPs", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    var data = await response.json()
+    chronicData = data["ChronicData"]
+    eventData = data["EventPSDs"]
+    eventMarker = data["EventMarker"]
+    if (chronicData.length > 0) {
+      plotly_chronicLFPs(chronicData, eventMarker)
+      populateCircadianRhythmSelector(chronicData)
+      populateEventLockedPowerSelector(chronicData)
+      populateTherapyPowerAmplitudeSelector(chronicData)
+    }
+    if (eventData.length > 0) {
+      populateEventPSDSelector(eventData)
+    }
+  }
+
+  Swal.close()
+}
+
+async function populateCircadianRhythmSelector(data)
+{
+  var linkTemplate = `<a class="dropdown-item border-radius-md" href="javascript:plotly_renderCircadianRhythm('{HEMISPHERENAME}','{GROUPNAME}');">{HEMISPHERENAME} {GROUPNAME}</a>`
+  for (var i = 0; i < data.length; i++)
+  {
+    var selector = document.getElementById("CircadianPowerGroupSelector")
+    data[i]["HemisphereName"] = data[i]["Device"] + " " + data[i]["Hemisphere"]
+
+    for (var j = 0; j < data[i]["CircadianPowers"].length; j++)
+    {
+      var element = document.createElement("li")
+      element.innerHTML = linkTemplate.replaceAll("{GROUPNAME}",data[i]["CircadianPowers"][j]["Therapy"]).replaceAll("{HEMISPHERENAME}", data[i]["HemisphereName"])
+      selector.appendChild(element)
+    }
+  }
+  if (selector.children.length > 0) {
+    document.getElementById("CircadianPowerCard").style.display = ""
+    if (data[0]["HemisphereName"]) plotly_renderCircadianRhythm(data[0]["HemisphereName"], data[0]["CircadianPowers"][0]["Therapy"])
+  }
+}
+
+async function populateEventLockedPowerSelector(data)
+{
+  var linkTemplate = `<a class="dropdown-item border-radius-md" href="javascript:plotly_renderEventLockedPower('{HEMISPHERENAME}','{GROUPNAME}');">{HEMISPHERENAME} {GROUPNAME}</a>`
+  for (var i = 0; i < data.length; i++)
+  {
+    var selector = document.getElementById("EventLockedPowerGroupSelector")
+    data[i]["HemisphereName"] = data[i]["Device"] + " " + data[i]["Hemisphere"]
+
+    for (var j = 0; j < data[i]["EventLockedPower"].length; j++)
+    {
+      var element = document.createElement("li")
+      element.innerHTML = linkTemplate.replaceAll("{GROUPNAME}",data[i]["EventLockedPower"][j]["Therapy"]).replaceAll("{HEMISPHERENAME}", data[i]["HemisphereName"])
+      if (data[i]["EventLockedPower"][j].hasOwnProperty("PowerChart")) {
+        selector.appendChild(element)
+      }
+    }
+  }
+  if (selector.children.length > 0) {
+    document.getElementById("EventLockedPowerCard").style.display = ""
+    if (data[0]["HemisphereName"]) plotly_renderEventLockedPower(data[0]["HemisphereName"], data[0]["CircadianPowers"][0]["Therapy"])
+  }
+}
+
+async function populateTherapyPowerAmplitudeSelector(data)
+{
+  var linkTemplate = `<a class="dropdown-item border-radius-md" href="javascript:plotly_renderTherapyPowerAmplitude('{HEMISPHERENAME}','{GROUPNAME}');">{HEMISPHERENAME} {GROUPNAME}</a>`
+  for (var i = 0; i < data.length; i++)
+  {
+    var selector = document.getElementById("TherapyPowerAmplitudeGroupSelector")
+    data[i]["HemisphereName"] = data[i]["Device"] + " " + data[i]["Hemisphere"]
+
+    for (var j = 0; j < data[i]["TherapyAmplitudes"].length; j++)
+    {
+      var element = document.createElement("li")
+      element.innerHTML = linkTemplate.replaceAll("{GROUPNAME}",data[i]["TherapyAmplitudes"][j]["Therapy"]).replaceAll("{HEMISPHERENAME}", data[i]["HemisphereName"])
+      selector.appendChild(element)
+    }
+  }
+  if (selector.children.length > 0) {
+    document.getElementById("TherapyPowerAmplitudeCard").style.display = ""
+    if (data[0]["HemisphereName"]) plotly_renderTherapyPowerAmplitude(data[0]["HemisphereName"], data[0]["TherapyAmplitudes"][0]["Therapy"])
+  }
+}
+
+async function populateEventPSDSelector(data)
+{
+  var linkTemplate = `<a class="dropdown-item border-radius-md" href="javascript:plotly_renderEventPSD('{HEMISPHERENAME}','{GROUPNAME}');">{HEMISPHERENAME} {GROUPNAME}</a>`
+  for (var i = 0; i < data.length; i++)
+  {
+    var selector = document.getElementById("PatientEventPSDGroupSelector")
+
+    for (var j = 0; j < data[i]["Render"].length; j++)
+    {
+      var element = document.createElement("li")
+      element.innerHTML = linkTemplate.replaceAll("{GROUPNAME}",data[i]["Render"][j]["Therapy"]).replaceAll("{HEMISPHERENAME}", data[i]["Render"][j]["Hemisphere"])
+      if (data[i]["Render"][j].hasOwnProperty("Events")) {
+        selector.appendChild(element)
+      }
+    }
+  }
+  if (selector.children.length > 0) {
+    document.getElementById("PatientEventPSDCard").style.display = ""
+    if (data[0]["Hemisphere"]) plotly_renderEventPSD(data[0]["Render"][0]["Hemisphere"], data[0]["Render"][0]["Therapy"]);
+  }
+}
+
+function plotly_chronicLFPs(data, eventMarker)
+{
+  var axisTitles = []
+  for (var k = 0; k < data.length; k++)
+  {
+    var title = data[k]["Device"] + " (" + data[k]["DeviceLocation"] + ") " + data[k]["Hemisphere"]
+    if (!axisTitles.includes(title)) axisTitles.push(title)
+  }
+
+  var layout = {
+    grid: {rows: axisTitles.length, columns: 1, pattern: "coupled"},
+    xaxis: {
+      domain: [0, 1],
+      rangeselector: {buttons: [
+        { count: 1, label: '1 Day', step: 'day', stepmode: 'todate' },
+        { count: 7, label: '1 Week', step: 'day', stepmode: 'todate' },
+        { count: 1, label: '1 Month', step: 'month', stepmode: 'todate' },
+        {step: 'all'}
+      ]},
+      rangeslider: {thickness: 0.1},
+    },
+    annotations: [],
+  };
+
+  var subplotHeight = 1/axisTitles.length
+  var subplotGap = subplotHeight*0.15
+  for (var i = 0; i < axisTitles.length; i++)
+  {
+    var key = ""
+    if (i == 0) key = "yaxis"
+    else key = "yaxis"+String(i+1)
+
+    var domainLimit = [1-subplotHeight*(i+1)+subplotGap, 1-subplotHeight*i]
+
+    layout[key] = {
+      domain: domainLimit,
+      showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+      ticks: "outside", range: [0,5000], zeroline: false,
+      title: {text: "Amplitude (a.u.)", font: {size: 15}},
+      color: "#000000", fixedrange: false,
+    }
+    layout["annotations"].push({text: axisTitles[i], font: {size: 20}, showarrow: false, x: 0.45, y: domainLimit[1], xref: "paper", yref: "paper", yanchor: "bottom"})
+  }
+
+  var traces = []
+  for (var k = 0; k < data.length; k++)
+  {
+    var title = data[k]["Device"] + " (" + data[k]["DeviceLocation"] + ") " + data[k]["Hemisphere"]
+    var yaxisID = "y" + String(axisTitles.indexOf(title)+1)
+
+    if (axisTitles.indexOf(title) == 0) layout["yaxis"]["range"] = [data[k]["PowerRange"][0]*1.8, data[k]["PowerRange"][1]*1.8]
+    else layout["yaxis"+String(axisTitles.indexOf(title)+1)]["range"] = [data[k]["PowerRange"][0]*1.8, data[k]["PowerRange"][1]*1.8]
+
+    for (var i = 0; i < data[k]["Timestamp"].length; i++)
+    {
+      var therapyString = ""
+      if (data[k]["Therapy"][i].hasOwnProperty("TherapyOverview")) therapyString = data[k]["Therapy"][i]["TherapyOverview"]
+
+      var timeArray = new Array(data[k]["Timestamp"][i].length)
+      for (var t = 0; t < timeArray.length; t++) timeArray[t] = new Date(data[k]["Timestamp"][i][t]*1000)
+
+      var trace = {
+        x: timeArray,
+        y: data[k]["Power"][i],
+        yaxis: yaxisID,
+        type: 'scatter',
+        mode: "lines",
+        line: {color: "#000000", width: 2},
+        hovertemplate: "  %{x} <br>  " + therapyString + "<br>  %{y:.2f} <extra></extra>",
+        showlegend: false
+      }
+      traces.push(trace)
+    }
+
+    for (var i = 0; i < eventMarker[k]["EventName"].length; i++) {
+      var trace = {
+        x: eventMarker[k]["EventTime"][i],
+        y: eventMarker[k]["EventPower"][i],
+        yaxis: yaxisID,
+        type: 'scatter',
+        mode: "markers",
+        marker: {color: eventMarker[k]["EventColor"][i], size: 8},
+        name: eventMarker[k]["EventName"][i],
+        legendgroup: eventMarker[k]["EventName"][i],
+        hovertemplate: "  %{x} <br>  " + therapyString + "<br>  " + eventMarker[k]["EventName"][i] + " <extra></extra>",
+        showlegend: true
+      }
+      traces.push(trace)
+    }
+  }
+
+  document.getElementById("IndefiniteStreamRawCard").style.display = ""
+  document.getElementById("RawChronicLFP").style.height = String((axisTitles.length)*400) + "px"
+  Plotly.newPlot('RawChronicLFP', traces, layout)
+}
+
+function shadedErrorTrace(x, y, stderr, traceTemplate)
+{
+  var traces = [];
+  var ydata = new Array(x.length)
+  for (var i = 0; i < x.length; i++)
+  {
+    ydata[i] = y[i]-stderr[i]
+  }
+
+  var trace = traceTemplate
+  trace["fill"] = "none"
+  trace["x"] = x
+  trace["y"] = ydata
+  traces.push(trace)
+
+  var ydata = new Array(x.length)
+  for (var i = 0; i < x.length; i++)
+  {
+    ydata[i] = y[i]+stderr[i]
+  }
+
+  var trace = traceTemplate
+  trace["fill"] = "tonexty"
+  trace["x"] = x
+  trace["y"] = ydata
+  traces.push(trace)
+
+  return traces
+}
+
+async function plotly_renderEventLockedPower(hemisphere, therapyName)
+{
+  for (var k = 0; k < chronicData.length; k++) {
+    if (chronicData[k]["HemisphereName"] == hemisphere) {
+      for (var j = 0; j < chronicData[k]["EventLockedPower"].length; j++) {
+        if (chronicData[k]["EventLockedPower"][j]["Therapy"] == therapyName) {
+
+          var traces = []
+          var data = chronicData[k]["EventLockedPower"][j]
+
+          for (var i = 0; i < data["PowerChart"].length; i++) {
+            var trace = {
+              x: data["TimeArray"],
+              y: data["PowerChart"][i]["Line"],
+              mode: 'lines',
+              type: 'scatter',
+              line: {color: data["PowerChart"][i]["EventColor"], width: 2},
+              hovertemplate: "%{y:.2f} <extra></extra>",
+              hovertemplate: "  %{x} min: %{y:.2f} <extra></extra>",
+              name: data["PowerChart"][i]["EventName"],
+              legendgroup: data["PowerChart"][i]["EventName"],
+              showlegend: true
+            }
+            traces.push(trace)
+
+            var ydata = new Array(data["TimeArray"].length)
+            for (var t = 0; t < data["TimeArray"].length; t++) ydata[t] = data["PowerChart"][i]["Line"][t]+data["PowerChart"][i]["Shade"][t]
+            var trace = {
+              x: data["TimeArray"],
+              y: ydata,
+              fill: "none",
+              fillcolor: data["PowerChart"][i]["EventColor"] + "44",
+              line: {color: "transparent"},
+              name: data["PowerChart"][i]["EventName"],
+              legendgroup: data["PowerChart"][i]["EventName"],
+              showlegend: false,
+              hoverinfo: "skip",
+              type: "scatter"
+            }
+            traces.push(trace)
+
+            var ydata = new Array(data["TimeArray"].length)
+            for (var t = 0; t < data["TimeArray"].length; t++) ydata[t] = data["PowerChart"][i]["Line"][t]-data["PowerChart"][i]["Shade"][t]
+            var trace = {
+              x: data["TimeArray"],
+              y: ydata,
+              fill: "tonexty",
+              fillcolor: data["PowerChart"][i]["EventColor"] + "44",
+              line: {color: "transparent"},
+              name: data["PowerChart"][i]["EventName"],
+              legendgroup: data["PowerChart"][i]["EventName"],
+              showlegend: false,
+              hoverinfo: "skip",
+              type: "scatter"
+            }
+            traces.push(trace)
+          }
+
+          var layout = {
+            title: hemisphere + " " + therapyName,
+            xaxis: {
+              showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+              range: [data["TimeArray"][0], data["TimeArray"][data["TimeArray"].length-1]],
+              ticks: "outside", title: {text: "Time (minutes)", font: {size: 15}},
+            },
+            yaxis: {
+              showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+              ticks: "outside", range: [data["PowerRange"][0],data["PowerRange"][1]], zeroline: false,
+              title: {text: "Amplitude (a.u.)", font: {size: 15}},
+              color: "#000000",
+            },
+            legend: {
+              yanchor: "top", y: 0.99, xanchor: "left", x:0.7
+            }
+          }
+
+          document.getElementById("EventLockedPowerChart").style.height = String(500) + "px"
+          Plotly.newPlot('EventLockedPowerChart', traces, layout)
+        }
+      }
+    }
+  }
+}
+
+async function plotly_renderCircadianRhythm(hemisphere, therapyName)
+{
+  for (var k = 0; k < chronicData.length; k++) {
+    if (chronicData[k]["HemisphereName"] == hemisphere) {
+      for (var j = 0; j < chronicData[k]["CircadianPowers"].length; j++) {
+        if (chronicData[k]["CircadianPowers"][j]["Therapy"] == therapyName) {
+
+          var traces = []
+          var data = chronicData[k]["CircadianPowers"][j]
+
+          var timeArray = new Array(data["AverageTimestamp"].length)
+          for (var t = 0; t < timeArray.length; t++)  {
+            timeArray[t] = new Date(data["AverageTimestamp"][t]*1000)
+          }
+
+          var trace = {
+            x: timeArray,
+            y: data["AveragePower"],
+            mode: 'lines',
+            type: 'scatter',
+            line: {color: "#AA0000", width: 2},
+            hovertemplate: "  %{x} <br>  " + therapyName + "<br>  %{y:.2f} <extra></extra>",
+            showlegend: false
+          }
+          traces.push(trace)
+
+          var ydata = new Array(timeArray.length)
+          for (var t = 0; t < timeArray.length; t++) ydata[t] = data["AveragePower"][t]+data["StdErrPower"][t]
+          var trace = {
+            x: timeArray,
+            y: ydata,
+            fill: "none",
+            fillcolor: "#AA000044",
+            line: {color: "transparent"},
+            showlegend: false,
+            hoverinfo: "skip",
+            type: "scatter"
+          }
+          traces.push(trace)
+
+          var ydata = new Array(timeArray.length)
+          for (var t = 0; t < timeArray.length; t++) ydata[t] = data["AveragePower"][t]-data["StdErrPower"][t]
+          var trace = {
+            x: timeArray,
+            y: ydata,
+            fill: "tonexty",
+            fillcolor: "#AA000044",
+            line: {color: "transparent"},
+            showlegend: false,
+            hoverinfo: "skip",
+            type: "scatter"
+          }
+          traces.push(trace)
+
+          var d = new Date()
+          var layout = {
+            title: hemisphere + " " + therapyName,
+            xaxis: {
+              showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+              tickformat: "%H:%M %p",
+              range: [new Date(d.getTimezoneOffset()*60*1000), new Date(24*60*60*1000+d.getTimezoneOffset()*60*1000)]
+            },
+            yaxis: {
+              showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+              ticks: "outside", range: [0,data["PowerRange"][1]*1.8], zeroline: false,
+              title: {text: "Amplitude (a.u.)", font: {size: 15}},
+              color: "#000000",
+            }
+          }
+
+          document.getElementById("CircadianPowerChart").style.height = String(500) + "px"
+          Plotly.newPlot('CircadianPowerChart', traces, layout)
+        }
+      }
+    }
+  }
+}
+
+async function plotly_renderTherapyPowerAmplitude(hemisphere, therapyName)
+{
+  for (var k = 0; k < chronicData.length; k++) {
+    if (chronicData[k]["HemisphereName"] == hemisphere) {
+      for (var j = 0; j < chronicData[k]["TherapyAmplitudes"].length; j++) {
+        if (chronicData[k]["TherapyAmplitudes"][j]["Therapy"] == therapyName) {
+
+          var traces = []
+          var data = chronicData[k]["TherapyAmplitudes"][j]
+
+          var trace = {
+            x: data["Amplitude"],
+            y: data["Power"],
+            type: "box",
+            width: 0.2,
+            marker: {color: 'rgb(46, 20, 105)'},
+            line: {color: 'rgb(46, 20, 105)'},
+            hovertemplate: "<extra></extra>",
+            showlegend: false
+          }
+          traces.push(trace)
+
+          var d = new Date()
+          var layout = {
+            title: hemisphere + " " + therapyName,
+            xaxis: {
+              showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+              range: [0,5], tick0: 0, dtick: 0.5
+            },
+            yaxis: {
+              showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+              ticks: "outside", zeroline: false,
+              title: {text: "Amplitude (a.u.)", font: {size: 15}},
+              color: "#000000",
+            }
+          }
+
+          document.getElementById("TherapyPowerAmplitudeChart").style.height = String(500) + "px"
+          Plotly.newPlot('TherapyPowerAmplitudeChart', traces, layout)
+        }
+      }
+    }
+  }
+}
+
+async function plotly_renderEventPSD(hemisphere, therapyName)
+{
+  for (var k = 0; k < eventData.length; k++) {
+    if (eventData[k]["Device"] + " " + eventData[k]["Hemisphere"] == hemisphere) {
+      for (var j = 0; j < eventData[k]["Render"].length; j++) {
+        if (eventData[k]["Render"][j]["Therapy"] == therapyName) {
+
+          var traces = []
+          var data = eventData[k]["Render"][j]
+
+          var frequencyArray = new Array(100)
+          for (var t = 0; t < frequencyArray.length; t++)  {
+            frequencyArray[t] = t*250/256
+          }
+
+          for (var i = 0; i < data["Events"].length; i++) {
+
+            var trace = {
+              x: frequencyArray,
+              y: data["Events"][i]["MeanPSD"],
+              mode: 'lines',
+              type: 'scatter',
+              line: {color: data["Events"][i]["EventColor"], width: 2},
+              hovertemplate: " " + data["Events"][i]["EventName"] + " %{y:.2f} <extra></extra>",
+              name: data["Events"][i]["EventName"] + " " + data["Events"][i]["Count"],
+              legendgroup: data["Events"][i]["EventName"],
+              showlegend: true
+            }
+            traces.push(trace)
+
+            var ydata = new Array(frequencyArray.length)
+            for (var t = 0; t < frequencyArray.length; t++) ydata[t] = data["Events"][i]["MeanPSD"][t]+data["Events"][i]["StdPSD"][t]
+            var trace = {
+              x: frequencyArray,
+              y: ydata,
+              fill: "none",
+              fillcolor: data["Events"][i]["EventColor"] + "44",
+              line: {color: "transparent"},
+              name: data["Events"][i]["EventName"],
+              legendgroup: data["Events"][i]["EventName"],
+              showlegend: false,
+              hoverinfo: "skip",
+              type: "scatter"
+            }
+            traces.push(trace)
+
+            var ydata = new Array(frequencyArray.length)
+            for (var t = 0; t < frequencyArray.length; t++) ydata[t] = data["Events"][i]["MeanPSD"][t]-data["Events"][i]["StdPSD"][t]
+            var trace = {
+              x: frequencyArray,
+              y: ydata,
+              fill: "tonexty",
+              fillcolor: data["Events"][i]["EventColor"] + "44",
+              line: {color: "transparent"},
+              name: data["Events"][i]["EventName"],
+              legendgroup: data["Events"][i]["EventName"],
+              showlegend: false,
+              hoverinfo: "skip",
+              type: "scatter"
+            }
+            traces.push(trace)
+          }
+
+          var layout = {
+            title: hemisphere + " " + therapyName,
+            xaxis: {
+              showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+              range: [0, 100],
+              ticks: "outside", title: {text: "Frequency (Hz)", font: {size: 15}},
+            },
+            yaxis: {
+              type: "log",
+              showgrid: true,
+              gridcolor: "#DDDDDD",
+              showline: true,
+              linecolor: "#000000",
+              ticks: "outside",
+              range: [-1.1,0.8],
+              zeroline: false,
+              title: {text: "Power (a.u.)", font: {size: 15}},
+              tickfont_size: 12,
+              tickmode: "array",
+              tickvals: [0.001,0.01,0.1,1,10],
+              color: "#000000",
+            },
+            legend: {
+              yanchor: "top", y: 0.99, xanchor: "left", x:0.7
+            },
+            hovermode: "x"
+          }
+
+          document.getElementById("PatientEventPSDChart").style.height = String(500) + "px"
+          Plotly.newPlot('PatientEventPSDChart', traces, layout)
+        }
+      }
+    }
+  }
+}
+
+function exportChronicLFPs() {
+  for (var n = 0; n < chronicData.length; n++) {
+    var csvData = "Time,Power,Therapy\n"
+    for (var i = 0; i < chronicData[n]["Power"].length; i++) {
+      for (var j = 0; j < chronicData[n]["Power"][i][j]; j++) {
+        csvData += chronicData[n]["Timestamp"][i][j] + "," + chronicData[n]["Power"][i][j] + "," + chronicData[n]["Therapy"][i]["TherapyOverview"] + "\n"
+      }
+    }
+    var downloader = document.createElement('a');
+    downloader.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvData);
+    downloader.target = '_blank';
+    downloader.download = '{{Patient.Name}} ' + chronicData[n]["Device"] + ' ' + chronicData[n]["Hemisphere"] + ' Chronic LFP.csv';
+    downloader.click();
+  }
+}
+
+</script>
+{% endblock %}

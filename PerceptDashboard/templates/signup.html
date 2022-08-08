@@ -1,0 +1,109 @@
+{% extends 'auth_basic.html' %}
+
+{% load static %}
+
+{% block authform %}
+
+<div class="card z-index-0" style="margin-top: 40px; margin-bottom: 40px;">
+  <div class="card-header text-center pt-4">
+    <h5>Register with Email</h5>
+  </div>
+  <div class="card-body">
+    <form role="form">
+      <div class="mb-3 row">
+        <div class="col-12 col-lg-6">
+          <input id="firstnameForm" type="text" class="form-control" placeholder="First Name" aria-label="First Name" required>
+        </div>
+        <div class="col-12 col-lg-6">
+          <input id="lastnameForm" type="text" class="form-control" placeholder="Last Name" aria-label="Last Name" required>
+        </div>
+      </div>
+      <div class="mb-3">
+        <input id="emailForm" type="email" class="form-control" placeholder="Email" aria-label="Email" required>
+      </div>
+      <div class="mb-3">
+        <input id="passwordForm" type="password" class="form-control" placeholder="Password" aria-label="Password" required>
+      </div>
+      <div class="mb-3">
+        <div class="form-group">
+          <label for="InstituteSelection">Institute</label>
+          <select class="form-control" id="instituteSelection">
+            <option value="Independent">Independent User</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-check form-check-info text-start">
+        <input class="form-check-input" type="checkbox" value="" id="agreementCheckbox">
+        <label class="form-check-label" for="flexCheckDefault">
+          I have read the <a href="javascript:displayTermsAndCondition();" class="text-dark font-weight-bolder">Disclaimer</a>
+        </label>
+      </div>
+      <div class="text-center">
+        <button type="button" class="btn bg-gradient-dark w-100 my-4 mb-2" onclick="submitRegistration()">Sign up</button>
+      </div>
+      <p class="text-sm mt-3 mb-0">Already have an account? <a href="/signin" class="text-dark font-weight-bolder">Sign in</a></p>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+async function submitRegistration() {
+
+  if (!document.getElementById("agreementCheckbox").checked) {
+    showNotification("danger", "top", "right", "Please verify that you have read the disclaimer.", 5000)
+    return
+  }
+
+  var formData = new FormData()
+  formData.append("FirstName", document.getElementById("firstnameForm").value)
+  formData.append("LastName", document.getElementById("lastnameForm").value)
+  formData.append("Email", document.getElementById("emailForm").value)
+  formData.append("Password", document.getElementById("passwordForm").value)
+  formData.append("Institute", document.getElementById("instituteSelection").value)
+
+  if (document.getElementById("firstnameForm").value.length == 0 || document.getElementById("lastnameForm").value.length == 0)
+  {
+    showNotification("danger", "top", "right", "Please enter your name.", 5000)
+    return
+  }
+
+  if (!validateEmail(document.getElementById("emailForm").value))
+  {
+    showNotification("danger", "top", "right", "Malformated Email Address.", 5000)
+    return
+  }
+
+  response = await fetch(window.location.origin + "/signup", {method: "POST", body: formData, headers: {'X-CSRFToken': csrftoken}, })
+  if (response.status != 200)
+  {
+    try {
+      data = await response.json()
+      showNotification(data["type"], "top", "right", data["message"], 5000)
+    } catch (e) {
+      console.log(e)
+    }
+  }
+  else
+  {
+    window.location.href = window.location.origin + "/index"
+  }
+}
+
+function displayTermsAndCondition() {
+  Swal.fire({
+    title: 'Disclaimer',
+    html: `
+      <div class="text-sm" style="text-align: left;">
+      This is a demo website for the Percept Analysis Platform submitted for publication.
+      Registered Accounts are by default "Researcher-only" accounts without ability to view identified data. <br>
+      The platform is hosted in a cloud-server and data are stored in cloud server to demonstrate long-term data analysis capability.
+      Please upload data with that in mind and upload deidentified data only. <br>
+      </div>
+    `,
+    showConfirmButton: true
+  })
+}
+</script>
+{% endblock %}

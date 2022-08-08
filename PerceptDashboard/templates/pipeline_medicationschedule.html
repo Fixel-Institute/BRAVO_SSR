@@ -1,0 +1,367 @@
+{% extends 'dashboard_basic.html' %}
+{% load static %}
+
+{% block pageTitle %} BrainSense Survey - Percept Analysis Platform {% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+    <li class="breadcrumb-item text-sm">
+      <a class="text-white" href="javascript:;">
+        <i class="ni ni-app"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/patients">Patients</a></li>
+    <li class="breadcrumb-item text-sm text-white active" aria-current="page"><a class="opacity-5 text-white" href="/patientOverview">{{Patient.Name}}</a></li>
+  </ol>
+  <h6 class="font-weight-bolder mb-0 text-white">Custome Analysis Pipelines</h6>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row gx-4">
+  <div class="col-7">
+    <div class="card mb-4">
+      <div class="card-header pb-3">
+        <div class="h-100">
+          <h5>Select Time Range of Interest</h5>
+          <p class="text-sm">Only periods with BrainSense is shown.</p>
+        </div>
+        <div class="nav-wrapper position-relative ms-auto">
+          <ul class="nav nav-pills nav-fill p-1" role="tablist">
+            <li class="nav-item">
+              <a id="LeftHemisphereDataList" class="nav-link mb-0 px-4 py-1 active" data-bs-toggle="tab" href="#LeftHemisphereTimeSelect" role="tab" aria-selected="true">
+                Left Hemisphere
+              </a>
+            </li>
+            <li class="nav-item">
+              <a id="RightHemisphereDataList" class="nav-link mb-0 px-4 py-1" data-bs-toggle="tab" href="#RightHemisphereTimeSelect" role="tab" aria-selected="false">
+                Right Hemisphere
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="card-body tab-content pt-0">
+        <div class="tab-pane fade show active" id="LeftHemisphereTimeSelect" role="tabpanel" aria-labelledby="nav-home-tab" style="max-height: 500px; overflow-y: auto;">
+        </div>
+        <div class="tab-pane fade" id="RightHemisphereTimeSelect" role="tabpanel" aria-labelledby="nav-profile-tab" style="max-height: 500px; overflow-y: auto;">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-5">
+    <div class="card mb-4">
+      <div class="card-header pb-0 p-3">
+        <div class="d-flex">
+          <h6 class="mb-0">Event Category</h6>
+          <div class="form-check form-switch ms-auto">
+            <button type="button" class="btn btn-sm btn-primary mb-0" onclick="addTime(); this.blur();">
+              Add
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <ul class="list-group" id="scheduleList">
+        </ul>
+      </div>
+    </div>
+    <button type="button" class="btn btn-info btn-lg w-100" onclick="generateMedicationCycle(); this.blur();">Generate</button>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-lg-6 mb-4">
+    <div id="MedicationPowerCard" class="card z-index-0 h-100" style="display: none;">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <div class="row">
+          <div class="col-6 d-flex align-items-center">
+            <h6 class="text-capitalize">Scheduled Medication Effect</h6>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="MedicationPowerChart" class="chart" style="height: 200px;">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.plot.ly/plotly-2.8.3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.4.3/math.min.js"></script>
+<script>
+
+var timePeriodTableTemplate = `
+<div class="d-flex">
+  <div class="text-center w-5">
+    <i class="fas fa-desktop text-lg opacity-6" aria-hidden="true"></i>
+  </div>
+  <div class="row w-95">
+    <div class="col-4">
+      <p class="text-secondary text-sm my-auto ms-3">{TIMESELECTION}</p>
+    </div>
+    <div class="col-4">
+      <div class="h-100">
+        <p class="text-sm mb-0">
+          {CONTACTINFORMATION}
+        </p>
+        <p class="text-sm mb-1">
+          {THERAPYCONFIGURATION}
+        </p>
+        <p class="mb-0 text-xs">
+          {SENSINGCONFIG}
+        </p>
+      </div>
+    </div>
+    <div class="col-4">
+      <button class="btn btn-primary btn-sm text-white text-sm my-auto" onclick="selectTimePeriod(this); this.blur();" data-targetspan="{SPANID}">Select</button>
+      <span id="{SPANID}" class="badge badge-success badge-lg my-auto ms-auto me-3" style="display: none;">Active</span>
+    </div>
+  </div>
+</div>
+`
+var separator = `<hr class="horizontal dark">`;
+
+var timeTemplate = `
+<li id="{TIMEID}" data-timestamp='{TIMESTAMP}' class="list-group-item border-0 d-flex justify-content-between ps-0 mb-2 border-radius-lg">
+  <div class="d-flex align-items-center">
+    <div class="icon icon-shape icon-sm me-3 bg-gradient-dark shadow text-center">
+      <i class="ni ni-mobile-button text-white opacity-10"></i>
+    </div>
+    <div class="d-flex flex-column">
+      <h6 class="mb-1 text-dark text-sm">Medication Time</h6>
+      <span class="text-xs">{SCHEDULETIME}</span>
+    </div>
+  </div>
+  <div class="d-flex">
+    <button class="btn btn-link btn-icon-only btn-rounded btn-sm text-dark my-auto" onclick="removeTime(this);" data-tagid="{TIMEID}">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+</li>
+`
+
+$(document).ready(function() {
+  document.getElementById('analysesNavbar').classList.add("active");
+  requestChronicLFPData();
+})
+
+var chronicData;
+async function requestChronicLFPData()
+{
+  Swal.fire({
+    title: 'Downloading Data',
+    html: 'Please wait while data are being downloaded',
+    didOpen: () => {
+      Swal.showLoading()
+    },
+    showConfirmButton: false
+  })
+
+  let formData = new FormData();
+  formData.append("requestData", '{{PatientID}}');
+  const response = await fetch(window.location.origin + "/pipeline/medicationschedule", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },});
+  if (response.status == 200)
+  {
+    var data = await response.json();
+    chronicData = data["ChronicData"];
+    showChronicLFPSelection();
+  }
+  Swal.close()
+}
+
+function showChronicLFPSelection() {
+  for (var i = 0; i < chronicData.length; i++) {
+    if (chronicData[i]["Hemisphere"].startsWith("Left")) {
+      var card = document.getElementById("LeftHemisphereTimeSelect");
+      card.innerHTML = ""
+    } else {
+      var card = document.getElementById("RightHemisphereTimeSelect");
+      card.innerHTML = ""
+    }
+
+    for (var j = 0; j < chronicData[i]["Timestamp"].length; j++) {
+      var timeRange = formatDateString(new Date(chronicData[i]["Timestamp"][j][chronicData[i]["Timestamp"][j].length-1]*1000), "{%Y} {%B} {%D}, {%H}:{%M} {%P}") + " -<br>" + formatDateString(new Date(chronicData[i]["Timestamp"][j][0]*1000), "{%Y} {%B} {%D}, {%H}:{%M} {%P}")
+
+      if (chronicData[i]["Hemisphere"].startsWith("Left")) {
+        if (chronicData[i]["Therapy"][j]["LeftHemisphere"]["SensingSetup"]) {
+          var sensingConfig = "Sensing " + chronicData[i]["Therapy"][j]["LeftHemisphere"]["SensingSetup"]["FrequencyInHertz"] + " Hz"
+        } else {
+          var sensingConfig = "Sensing 0 Hz"
+        }
+        var contactConfig = chronicData[i]["Therapy"][j]["LeftHemisphere"]["Channel"] + " Stimulation"
+        var therapyConfig = chronicData[i]["Therapy"][j]["LeftHemisphere"]["Frequency"] + " Hz " + chronicData[i]["Therapy"][j]["LeftHemisphere"]["PulseWidth"] + " uS"
+      } else {
+        if (chronicData[i]["Therapy"][j]["RightHemisphere"]["SensingSetup"]) {
+          var sensingConfig = "Sensing " + chronicData[i]["Therapy"][j]["RightHemisphere"]["SensingSetup"]["FrequencyInHertz"] + " Hz"
+        } else {
+          var sensingConfig = "Sensing 0 Hz"
+        }
+        var contactConfig = chronicData[i]["Therapy"][j]["RightHemisphere"]["Channel"] + " Stimulation"
+        var therapyConfig = chronicData[i]["Therapy"][j]["RightHemisphere"]["Frequency"] + " Hz " + chronicData[i]["Therapy"][j]["RightHemisphere"]["PulseWidth"] + " uS"
+      }
+
+      var cardInfo = timePeriodTableTemplate
+      cardInfo = cardInfo.replaceAll("{TIMESELECTION}",timeRange).replaceAll("{SENSINGCONFIG}",sensingConfig).replaceAll("{CONTACTINFORMATION}",contactConfig).replaceAll("{THERAPYCONFIGURATION}",therapyConfig)
+      cardInfo = cardInfo.replaceAll("{SPANID}","Left" + j)
+      card.innerHTML += cardInfo
+
+      if (j < chronicData[i]["Timestamp"].length-1) {
+        card.innerHTML += separator
+      }
+    }
+  }
+}
+
+function selectTimePeriod(el) {
+  var id = el.dataset.targetspan;
+  var tag = document.getElementById(id)
+  if (tag.style.display == "") {
+    tag.style.display = "none"
+  } else {
+    tag.style.display = ""
+  }
+}
+
+function addTime() {
+  Swal.fire({
+    title: 'Please enter scheduled medication time',
+    html: `<div class="form-group">
+        <input class="form-control" type="time" value="08:30" id="time-input">
+    </div>`,
+    stopKeydownPropagation: false,
+  }).then((result) => {
+    if (result.isConfirmed) {
+      var timeInput = Swal.getPopup().querySelector("#time-input")
+      var list = document.getElementById("scheduleList")
+      list.innerHTML += timeTemplate.replaceAll("{SCHEDULETIME}", timeInput.value).replaceAll("{TIMEID}", timeInput.value).replaceAll("{TIMESTAMP}", timeInput.valueAsNumber)
+    }
+  })
+}
+
+function removeTime(el) {
+  var id = el.dataset.tagid;
+  document.getElementById(id).remove()
+}
+
+function generateMedicationCycle() {
+  document.getElementById("MedicationPowerCard").style.display = ""
+
+  if (document.getElementById("RightHemisphereDataList").classList.contains("active")) {
+    var hemisphere = "RightHemisphere"
+  } else {
+    var hemisphere = "LeftHemisphere"
+  }
+
+  var list = document.getElementById(hemisphere+"TimeSelect")
+  var selectorTags = list.getElementsByTagName("span")
+  var timestamp = []
+  var power = []
+  for (var i = 0; i < selectorTags.length; i++) {
+    if (selectorTags[i].style.display != "none") {
+      timestamp.push(...chronicData[0]["Timestamp"][i]);
+      power.push(...chronicData[0]["Power"][i]);
+    }
+  }
+
+  var medicationschedule = []
+  var medicationTimes = document.getElementById("scheduleList").getElementsByTagName("li")
+  for (var i = 0; i < medicationTimes.length; i++) {
+    medicationschedule.push(parseInt(medicationTimes[i].dataset.timestamp)/1000)
+  }
+
+  var medicationCycle = new Array(30)
+  var medicationCycleTime = new Array(30)
+  for (var i = 0; i < medicationCycleTime.length; i++) {
+    medicationCycleTime[i] = (i-15)*10
+    medicationCycle[i] = []
+  }
+
+  var dailyTimestamp = new Array(timestamp.length)
+  const timezoneOffset = new Date().getTimezoneOffset()*-60
+  for (var t = 0; t < dailyTimestamp.length; t++) {
+    dailyTimestamp[t] = (timestamp[t] + timezoneOffset) % (86400);
+  }
+
+  for (var i = 0; i < medicationschedule.length; i++) {
+    for (var j = 0; j < dailyTimestamp.length; j++) {
+      var index = Math.round((dailyTimestamp[j] - medicationschedule[i]) / 600)
+      if (index < 15 && index >= -15) {
+        medicationCycle[index+15].push(power[j])
+      }
+    }
+  }
+
+  var medicationCycleMean = new Array(30)
+  var medicationCycleStd = new Array(30)
+  for (var i = 0; i < medicationCycleTime.length; i++) {
+    medicationCycleMean[i] = math.mean(medicationCycle[i])
+    medicationCycleStd[i] = math.std(medicationCycle[i]) / math.sqrt(medicationCycle[i].length)
+  }
+
+  var traces = []
+  var trace = {
+    x: medicationCycleTime,
+    y: medicationCycleMean,
+    mode: 'lines',
+    type: 'scatter',
+    line: {color: "#000000", width: 2},
+    hovertemplate: "  %{x} min: %{y:.2f} <extra></extra>",
+    showlegend: false
+  }
+  traces.push(trace)
+
+  var ydata = new Array(medicationCycleTime.length)
+  for (var t = 0; t < medicationCycleTime.length; t++) ydata[t] = medicationCycleMean[t]+medicationCycleStd[t]
+  var trace = {
+    x: medicationCycleTime,
+    y: ydata,
+    fill: "none",
+    fillcolor: "#000000" + "44",
+    line: {color: "transparent"},
+    showlegend: false,
+    hoverinfo: "skip",
+    type: "scatter"
+  }
+  traces.push(trace)
+
+  var ydata = new Array(medicationCycleTime.length)
+  for (var t = 0; t < medicationCycleTime.length; t++) ydata[t] = medicationCycleMean[t]-medicationCycleStd[t]
+  var trace = {
+    x: medicationCycleTime,
+    y: ydata,
+    fill: "tonexty",
+    fillcolor: "#000000" + "44",
+    line: {color: "transparent"},
+    showlegend: false,
+    hoverinfo: "skip",
+    type: "scatter"
+  }
+  traces.push(trace)
+
+  var layout = {
+    xaxis: {
+      showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+      range: [medicationCycleTime[0], medicationCycleTime[medicationCycleTime.length-1]],
+      ticks: "outside", title: {text: "Time (minutes)", font: {size: 15}},
+    },
+    yaxis: {
+      showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+      ticks: "outside", zeroline: false,
+      title: {text: "Amplitude (a.u.)", font: {size: 15}},
+      color: "#000000",
+    }
+  }
+
+  document.getElementById("MedicationPowerChart").style.height = String(500) + "px"
+  Plotly.newPlot('MedicationPowerChart', traces, layout)
+}
+
+</script>
+{% endblock %}

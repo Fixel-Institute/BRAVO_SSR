@@ -1,0 +1,57 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Percept Analysis Platform Documentation</title>
+  <!-- Meta -->
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700&display=swap" rel="stylesheet">
+  <script src="https://kit.fontawesome.com/65827b2eab.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.2/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="{% static 'plugins/simplelightbox/simple-lightbox.min.css' %}">
+  <link id="theme-style" rel="stylesheet" href="{% static 'css/theme.css' %}">
+</head>
+
+<body class="docs-page">
+  <header class="header fixed-top">
+    <div class="branding docs-branding">
+      <div class="container-fluid position-relative py-2">
+        <div class="docs-logo-wrapper">
+          <button id="docs-sidebar-toggler" class="docs-sidebar-toggler docs-sidebar-visible me-2 d-xl-none" type="button">
+          <span></span>
+          <span></span>
+          <span></span>
+          </button>
+          <div class="site-logo">
+            <a class="navbar-brand" href="/documentation">
+              <span class="logo-text">UF BRAVO Platform <span class="text-alt">Docs</span></span>
+            </a>
+          </div>
+        </div><!--//docs-logo-wrapper-->
+        <div class="docs-top-utilities d-flex justify-content-end align-items-center">
+          <div class="site-logo" style="padding-left: 10px; padding-right: 10px; border-radius: 10px; background: linear-gradient(to bottom right, #8eeeee, #9198e5);">
+            <a class="navbar-brand" href="/patients" style="display: flex; justify-content: center; padding: 10px;">
+              <span class="logo-text" style="font-size: 18px; ">Return to Platfrorm</span>
+            </a>
+          </div>
+        </div><!--//docs-top-utilities-->
+      </div><!--//container-->
+    </div><!--//branding-->
+  </header><!--//header-->
+
+  {% block content %} {% endblock %}
+  <!-- Javascript -->
+  <script src="{% static 'plugins/popper.min.js' %}"></script>
+  <script src="{% static 'plugins/bootstrap/js/bootstrap.min.js' %}"></script>
+  <script src="{% static 'plugins/smoothscroll.min.js' %}"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.8/highlight.min.js"></script>
+  <script src="{% static 'js/highlight-custom.js' %}"></script>
+  <script src="{% static 'plugins/simplelightbox/simple-lightbox.min.js' %}"></script>
+  <script src="{% static 'plugins/gumshoe/gumshoe.polyfills.min.js' %}"></script>
+  <script src="{% static 'js/docs.js' %}"></script>
+</body>
+</html>

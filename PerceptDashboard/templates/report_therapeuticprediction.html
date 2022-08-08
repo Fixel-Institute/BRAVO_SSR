@@ -1,0 +1,1027 @@
+{% extends 'dashboard_basic.html' %}
+{% load static %}
+
+{% block pageTitle %} Therapy History - Percept Analysis Platform {% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+    <li class="breadcrumb-item text-sm">
+      <a class="text-white" href="javascript:;">
+        <i class="ni ni-app"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/patients">Patients</a></li>
+    <li class="breadcrumb-item text-sm text-white active" aria-current="page"><a class="opacity-5 text-white" href="/patientOverview">{{Patient.Name}}</a></li>
+  </ol>
+  <h6 class="font-weight-bolder mb-0 text-white">Therapeutic Prediction</h6>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-sm-12 col-lg-6 mb-4">
+    <label class="form-label">Choose BrainSense Streaming Day</label>
+    <select class="form-control" name="BrainSenseStreamSelection" id="BrainSenseStreamSelection" onchange="selectDisplay()">
+    </select>
+  </div>
+</div>
+
+<div id="RecommendedRingSettingBlock" style="display: none;">
+  <div id="RecommendedRingSettingCard" class="row">
+  </div>
+</div>
+
+<div id="RecommendedSegmentSettingBlock" style="display: none;">
+  <div id="RecommendedSegmentSettingCard" class="row">
+  </div>
+</div>
+
+<div id="StreamTable" class="row">
+  <div class="col-12 mb-4">
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table align-items-center mb-0">
+          <thead>
+            <tr>
+              <th class="text-uppercase text-left text-secondary text-xxs font-weight-bolder opacity-7 w-10">Recording Date</th>
+              <th class="text-uppercase text-left text-secondary text-xxs font-weight-bolder opacity-7 w-10">Therapy Settings</th>
+              <th class="text-uppercase text-left text-secondary text-xxs font-weight-bolder opacity-7 w-5">Contact Mode</th>
+              <th class="text-uppercase text-left text-secondary text-xxs font-weight-bolder opacity-7 w-10">Suggested Outcome</th>
+              <th class="text-uppercase text-center text-secondary text-xxs font-weight-bolder opacity-7 w-10">Stimulation Range</th>
+              <th class="text-uppercase text-center text-secondary text-xxs font-weight-bolder opacity-7 w-10">Features Change</th>
+              <th class="text-uppercase text-left text-secondary text-xxs font-weight-bolder opacity-7 w-5"></th>
+            </tr>
+          </thead>
+          <tbody id="StreamTableBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 mb-4">
+    <div id="BrainSenseStreamSpectrogramCard" class="card z-index-0 h-100" style="display: none;">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <h6 class="text-capitalize">Brain Sense Stream Time-Frequency Analysis</h6>
+      </div>
+      <div class="card-body p-3">
+        <div id="BrainSenseStreamSpectrogramChart" class="chart" data-spectmethod="{{Config.SpectrogramMethod}}">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6 mb-4">
+    <div id="BrainSenseStimulationPSDCard-Left" class="card z-index-0 h-100" style="display: none;">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <div class="d-flex align-items-center">
+          <h6 class="text-capitalize">Spectral Features vs. Stimulation (Left)</h6>
+          <div class="form-check form-switch ps-0 ms-auto">
+            <input class="form-check-input ms-0" type="checkbox" autocomplete="off" id="BrainSenseStimulationPSDRefSwitch-Left" onclick="this.blur();" onchange="updateStimulationPSD('Left')">
+            <label class="form-check-label text-body ms-3 text-truncate w-80 mb-0" for="BrainSenseStimulationPSDRefSwitch-Left">Contralateral Reference</label>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="BrainSenseStimulationPSDChart-Left" class="chart" data-psdmethod="{{Config.PSDMethod}}" data-stimreference="{{Config.StimulationReference}}">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6 mb-4">
+    <div id="BrainSenseStimulationPSDCard-Right" class="card z-index-0 h-100" style="display: none;">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <div class="d-flex align-items-center">
+          <h6 class="text-capitalize">Spectral Features vs. Stimulation (Right)</h6>
+          <div class="form-check form-switch ps-0 ms-auto">
+            <input class="form-check-input ms-0" type="checkbox" autocomplete="off" id="BrainSenseStimulationPSDRefSwitch-Right" onclick="this.blur();" onchange="updateStimulationPSD('Right')">
+            <label class="form-check-label text-body ms-3 text-truncate w-80 mb-0" for="BrainSenseStimulationPSDRefSwitch-Right">Contralateral Reference</label>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="BrainSenseStimulationPSDChart-Right" class="chart" data-psdmethod="{{Config.PSDMethod}}" data-stimreference="{{Config.StimulationReference}}">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6 mb-4">
+    <div id="BrainSenseTherapyEffectCard-Left" class="card z-index-0 h-100" style="display: none;">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <div class="d-flex align-items-center">
+          <h6 class="text-capitalize">Effect of Stimulation (Left)</h6>
+          <div class="form-check form-switch ps-0 ms-auto">
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="BrainSenseTherapyEffectChart-Left" class="chart" data-psdmethod="{{Config.PSDMethod}}" data-stimreference="{{Config.StimulationReference}}">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6 mb-4">
+    <div id="BrainSenseTherapyEffectCard-Right" class="card z-index-0 h-100" style="display: none;">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <div class="d-flex align-items-center">
+          <h6 class="text-capitalize">Effect of Stimulation (Right)</h6>
+          <div class="form-check form-switch ps-0 ms-auto">
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="BrainSenseTherapyEffectChart-Right" class="chart" data-psdmethod="{{Config.PSDMethod}}" data-stimreference="{{Config.StimulationReference}}">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.plot.ly/plotly-2.8.3.min.js"></script>
+<script src="{% static 'js/plugins/choices.min.js' %}"></script>
+<script>
+
+$(".btn").mouseup(function(){
+    $(this).blur();
+})
+
+$(document).ready(function() {
+  document.getElementById('therapeuticPredictionNavbar').classList.add("active")
+  requestBrainSenseStreamOverview()
+})
+
+var streamOverview;
+async function requestBrainSenseStreamOverview()
+{
+  let formData = new FormData();
+  formData.append("requestOverview", '{{PatientID}}');
+  const response = await fetch(window.location.origin + "/report/prediction", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    streamOverview = await response.json()
+    var selectList = document.getElementById('BrainSenseStreamSelection')
+    if (streamOverview.length > 0)
+    {
+      var brainsenseStreams = []
+      for (var i = 0; i < streamOverview.length; i++) {
+        var timestruct = new Date(streamOverview[i]["Timestamp"]*1000)
+        for (var j = 0; j < streamOverview[i]["Channels"].length; j++) {
+          if (!brainsenseStreams.includes(streamOverview[i]["DeviceName"]+timestruct.getDate()+streamOverview[i]["Channels"][j]["Hemisphere"]))
+          {
+            var option = document.createElement("option");
+            option.value = streamOverview[i]["DeviceName"] + "_" + timestruct.toLocaleDateString() + "_" + streamOverview[i]["Channels"][j]["Hemisphere"];
+            option.text = formatDateString(timestruct,"{%B} {%D}, {%Y}") + " " + "[" + streamOverview[i]["DeviceName"] + "] " + streamOverview[i]["Channels"][j]["Hemisphere"];
+            selectList.appendChild(option);
+            brainsenseStreams.push(streamOverview[i]["DeviceName"]+timestruct.getDate()+streamOverview[i]["Channels"][j]["Hemisphere"])
+          }
+        }
+      }
+    }
+    const surveySelector = new Choices(selectList, {
+      shouldSort: false
+    });
+    displayStreamTable(selectList.value)
+  }
+}
+
+function selectDisplay()
+{
+  var selectList = document.getElementById('BrainSenseStreamSelection')
+  displayStreamTable(selectList.value)
+
+  document.getElementById("BrainSenseStreamSpectrogramCard").style.display = "none"
+  document.getElementById("BrainSenseStimulationPSDCard-Left").style.display = "none"
+  document.getElementById("BrainSenseStimulationPSDCard-Right").style.display = "none"
+  document.getElementById("BrainSenseTherapyEffectCard-Left").style.display = "none"
+  document.getElementById("BrainSenseTherapyEffectCard-Right").style.display = "none"
+}
+
+var rowTemplate = `
+<tr>
+  <td>
+    <div class="d-flex px-2 py-1">
+      <div class="d-flex flex-column justify-content-center">
+        <h6 class="mb-0 text-xs">{RECORDING_DATE}</h6>
+        <p class="text-xs text-secondary mb-0">{DEVICE_NAME}</p>
+      </div>
+    </div>
+  </td>
+  <td>
+    <p class="text-sm font-weight-bold mb-0">{SENSINGCHANNEL}</p>
+    <p class="text-sm font-weight-bold mb-0">{THERAPYFREQUENCY} Hz {THERAPYPULSEWIDTH} μS</p>
+  </td>
+  <td class="pe-4">
+    <select class="text-xs form-control" onchange="updateRecordingContactType(this,'{DEVICEID}','{TIMESTAMP}','{CHANNELID}')">
+      {SELECTOROPTION}
+    </select>
+  </td>
+  <td>
+    <p class="text-sm font-weight-bold mb-0">{SUGGESTEDAMPLITUDE}</p>
+    <div class="d-flex align-items-center">
+      <span class="me-2 text-xxs">{PREDICTPERCENT}</span>
+      <div>
+        <div class="progress">
+          <div class="progress-bar {PERCENTCOLOR}" role="progressbar" style="width: {ROUNDPREDICTPERCENT}%;"></div>
+        </div>
+      </div>
+    </div>
+  </td>
+  <td class="text-center">
+    <p class="text-xs font-weight-bold mb-0">{STIMULATIONRANGE}</p>
+  </td>
+  <td class="text-center">
+    <div class="d-flex flex-column justify-content-center">
+      <h6 class="mb-0 text-sm">{BETADROP}</h6>
+      <p class="text-xs text-secondary mb-0">{BETARANGE}</p>
+    </div>
+  </td>
+  <td class="align-middle">
+    <button type="button" class="btn btn-sm btn-primary mb-0" onclick="this.blur(); requestRealtimeStreamData('{TIMESTAMP}','{DEVICEID}');">
+      View
+    </button>
+  </td>
+</tr>
+`
+
+var streamData = {}
+var decisionMaker = []
+async function displayStreamTable(value) {
+  values = value.split("_")
+  deviceID = values[0]
+  selectedDate = values[1]
+  hemisphere = values[2]
+
+  document.getElementById("RecommendedRingSettingBlock").style.display = "none";
+  document.getElementById("RecommendedSegmentSettingBlock").style.display = "none";
+
+  var tablebody = document.getElementById("StreamTableBody")
+  tablebody.innerHTML = ""
+  decisionMaker = []
+  //document.getElementById("RecommendedRingSettingCard").style.display = "none"
+
+  Swal.fire({
+    title: 'Currently Processing',
+    html: `
+    <h5 id="loadingDataName"> Setting up </h5>
+    <div class="progress">
+      <div id="loadingProgressBar" class="progress-bar bg-primary" role="progressbar" style="width: 0%;"></div>
+    </div>
+    `,
+    didOpen: () => { Swal.showLoading() },
+    showCloseButton: false,
+    showCancelButton: false,
+    showConfirmButton: false,
+  })
+
+  filename = document.getElementById("loadingDataName")
+  progressBar = document.getElementById("loadingProgressBar")
+
+  var totalSessions = 0
+  decisionMaker = []
+  for (var i = 0; i < streamOverview.length; i++) {
+    if (streamOverview[i]["DeviceName"] != deviceID) continue;
+    if (!streamData.hasOwnProperty(streamOverview[i]["DeviceID"])) streamData[streamOverview[i]["DeviceID"]] = {}
+    if (!streamData[streamOverview[i]["DeviceID"]].hasOwnProperty(streamOverview[i]["Timestamp"])) streamData[streamOverview[i]["DeviceID"]][streamOverview[i]["Timestamp"]] = {}
+    var timestruct = new Date(streamOverview[i]["Timestamp"]*1000)
+    if (timestruct.toLocaleDateString() == selectedDate) {
+      for (var j = 0; j < streamOverview[i]["Channels"].length; j++) {
+        if (streamOverview[i]["Channels"][j]["Hemisphere"] == hemisphere) {
+          totalSessions++
+        }
+      }
+    }
+  }
+
+  var currentSession = 0
+  for (var i = 0; i < streamOverview.length; i++) {
+    if (streamOverview[i]["DeviceName"] != deviceID) continue;
+    if (!streamData.hasOwnProperty(streamOverview[i]["DeviceID"])) streamData[streamOverview[i]["DeviceID"]] = {}
+    if (!streamData[streamOverview[i]["DeviceID"]].hasOwnProperty(streamOverview[i]["Timestamp"])) streamData[streamOverview[i]["DeviceID"]][streamOverview[i]["Timestamp"]] = {}
+    var timestruct = new Date(streamOverview[i]["Timestamp"]*1000)
+    if (timestruct.toLocaleDateString() == selectedDate) {
+      for (var j = 0; j < streamOverview[i]["Channels"].length; j++) {
+        if (streamOverview[i]["Channels"][j]["Hemisphere"] == hemisphere) {
+          filename.innerHTML = streamOverview[i]["Channels"][j]["Hemisphere"] + " @ " + streamOverview[i]["Timestamp"]
+          currentSession++;
+          progressBar.style.width = (currentSession/totalSessions*100) + "%"
+          const data = await extractPredictionModel(streamOverview[i]["DeviceID"], streamOverview[i]["Timestamp"], hemisphere)
+
+          if (!data.hasOwnProperty("SuggestionAmplitude")) continue;
+          decisionFeatures = {}
+
+          var row = document.createElement("tr")
+          var rowContent = rowTemplate.replaceAll("{RECORDING_DATE}",timestruct.toLocaleString()).replaceAll("{DEVICE_NAME}",streamOverview[i]["DeviceName"])
+          rowContent = rowContent.replaceAll("{SUGGESTEDAMPLITUDE}",data["SuggestionAmplitude"].toFixed(2) + " mA")
+          rowContent = rowContent.replaceAll("{PREDICTPERCENT}",(data["Probability"]*100).toFixed(2) + "%").replaceAll("{ROUNDPREDICTPERCENT}",(data["Probability"]*100).toFixed(0))
+          if (data["Probability"]*100 < 30) rowContent = rowContent.replaceAll("{PERCENTCOLOR}","bg-danger")
+          else if (data["Probability"]*100 < 70) rowContent = rowContent.replaceAll("{PERCENTCOLOR}","bg-info")
+          else rowContent = rowContent.replaceAll("{PERCENTCOLOR}","bg-success")
+          rowContent = rowContent.replaceAll("{STIMULATIONRANGE}",data["StimulationRange"][0] + "mA - " + data["StimulationRange"][1] + "mA")
+          rowContent = rowContent.replaceAll("{BETADROP}",data["MaximumChanges"].toFixed(2) +" μV<sup>2</sup>/Hz")
+          rowContent = rowContent.replaceAll("{BETARANGE}",(data["MaximumChanges"]+data["FinalLevel"]).toFixed(2) + " - " + (data["FinalLevel"]).toFixed(2))
+
+          streamData[streamOverview[i]["DeviceID"]][streamOverview[i]["Timestamp"]]["ID"] = streamOverview[i]["RecordingID"]
+          streamData[streamOverview[i]["DeviceID"]][streamOverview[i]["Timestamp"]]["Channels"] = []
+          rowContent = rowContent.replaceAll("{TIMESTAMP}",streamOverview[i]["Timestamp"]).replaceAll("{DEVICEID}",streamOverview[i]["DeviceID"]).replaceAll("{CHANNELID}",hemisphere)
+
+          decisionFeatures["LeadInfo"] = streamOverview[i]["Channels"][j]["Hemisphere"] + ": " + " E{0} Stimulation".format(String((streamOverview[i]["Channels"][j]["Contacts"][0] + streamOverview[i]["Channels"][j]["Contacts"][1])/2).padStart(2,'0'))
+          decisionFeatures["ContactType"] = data["ContactType"]
+          decisionFeatures["PredictionPercent"] = data["Probability"]*100
+          decisionFeatures["SuggestedAmplitude"] = data["SuggestionAmplitude"].toFixed(2)
+          decisionFeatures["SideEffectThreshold"] = data["StimulationRange"][1]
+          decisionFeatures["BetaChange"] = data["MaximumChanges"]/(data["MaximumChanges"]+data["FinalLevel"])
+          if (hemisphere.startsWith("Left")) {
+            decisionFeatures["TherapyFrequency"] = data["Therapy"]["Left"]["RateInHertz"]
+            decisionFeatures["TherapyPulsewidth"] = data["Therapy"]["Left"]["PulseWidthInMicroSecond"]
+          } else {
+            decisionFeatures["TherapyFrequency"] = data["Therapy"]["Right"]["RateInHertz"]
+            decisionFeatures["TherapyPulsewidth"] = data["Therapy"]["Right"]["PulseWidthInMicroSecond"]
+          }
+
+          rowContent = rowContent.replaceAll("{THERAPYFREQUENCY}",decisionFeatures["TherapyFrequency"])
+          rowContent = rowContent.replaceAll("{THERAPYPULSEWIDTH}",decisionFeatures["TherapyPulsewidth"])
+
+          var electrodeInfo = ""
+          streamData[streamOverview[i]["DeviceID"]][streamOverview[i]["Timestamp"]]["Channels"].push(streamOverview[i]["Channels"][j]["Hemisphere"] + " E{0} - E{1} ".format(String(streamOverview[i]["Channels"][j]["Contacts"][0]).padStart(2,'0'),String(streamOverview[i]["Channels"][j]["Contacts"][1]).padStart(2,'0')))
+          //electrodeInfo += "<b>"+streamOverview[i]["Channels"][j]["Hemisphere"] + "</b>: <br>" + " E{0} - E{1} ".format(String(streamOverview[i]["Channels"][j]["Contacts"][0]).padStart(2,'0'),String(streamOverview[i]["Channels"][j]["Contacts"][1]).padStart(2,'0'))
+          electrodeInfo += "<b>"+streamOverview[i]["Channels"][j]["Hemisphere"] + "</b>: <br>" + " E{0} Stimulation".format(String((streamOverview[i]["Channels"][j]["Contacts"][0] + streamOverview[i]["Channels"][j]["Contacts"][1])/2).padStart(2,'0'))
+
+          var contactMode = ""
+          for (var k = 0; k < data["ContactTypes"].length; k++) {
+            if (data["ContactTypes"][k] == data["ContactType"]) {
+              contactMode += "<option value='" + data["ContactTypes"][k] + "' selected='selected'>" + data["ContactTypes"][k] + "</option>"
+            } else {
+              contactMode += "<option value='" + data["ContactTypes"][k] + "'>" + data["ContactTypes"][k] + "</option>"
+            }
+          }
+
+          row.innerHTML = rowContent.replaceAll("{SENSINGCHANNEL}",electrodeInfo).replaceAll("{SELECTOROPTION}",contactMode)
+          tablebody.appendChild(row);
+          decisionMaker.push(decisionFeatures)
+        }
+      }
+    }
+  }
+
+  Swal.close()
+
+  var optimalSettings = identifyOptimizeSetting(decisionMaker, "Ring")
+  if (optimalSettings.length > 0) {
+
+    var cardList = document.getElementById("RecommendedRingSettingCard")
+    cardList.innerHTML = ""
+    document.getElementById("RecommendedRingSettingBlock").style.display = "";
+
+    var settingCard = ""
+    for (var i = 0; i < optimalSettings.length; i++) {
+      var el = document.createElement("div")
+      el.classList.add(...["col-lg-4","col-12","mb-4"])
+      el.innerHTML = recommendedSettingCard.replace("{RINGTYPE}","Ring").replace("{LEADCONTACTS}", optimalSettings[i]["LeadInfo"] + " " + optimalSettings[i]["ContactType"]).replace("{CONFIGURATIONS}", optimalSettings[i]["TherapyFrequency"] + " Hz " + optimalSettings[i]["TherapyPulsewidth"] + " uS " + optimalSettings[i]["SuggestedAmplitude"] + " mA")
+      cardList.appendChild(el)
+    }
+  }
+
+  var optimalSettings = identifyOptimizeSetting(decisionMaker, "Segment")
+  if (optimalSettings.length > 0) {
+
+    var cardList = document.getElementById("RecommendedSegmentSettingCard")
+    cardList.innerHTML = ""
+    document.getElementById("RecommendedSegmentSettingBlock").style.display = "";
+
+    var settingCard = ""
+    for (var i = 0; i < optimalSettings.length; i++) {
+      var el = document.createElement("div")
+      el.classList.add(...["col-lg-4","col-12","mb-4"])
+      el.innerHTML = recommendedSettingCard.replace("{RINGTYPE}","Segment").replace("{LEADCONTACTS}", optimalSettings[i]["LeadInfo"] + " " + optimalSettings[i]["ContactType"]).replace("{CONFIGURATIONS}", optimalSettings[i]["TherapyFrequency"] + " Hz " + optimalSettings[i]["TherapyPulsewidth"] + " uS " + optimalSettings[i]["SuggestedAmplitude"] + " mA")
+      cardList.appendChild(el)
+    }
+  }
+}
+
+var recommendedSettingCard = `
+<div class="card card-background card-background-mask-info z-index-0">
+  <div class="card-body pt-4 text-center">
+    <h6 class="text-white mb-0">Recommended {RINGTYPE} Setting</h6>
+    <h3 class="text-white">{LEADCONTACTS}</h3>
+    <h5 class="text-white">{CONFIGURATIONS}</h5>
+  </div>
+</div>
+`
+
+function identifyOptimizeSetting(decisionMaker, contactType)
+{
+  var selectedSettings = []
+  // Get highest prediction percent
+  var predictionThreshold = 0;
+  var optimalBetaChange = 0
+  for (var i = 0; i < decisionMaker.length; i++) {
+    if (decisionMaker[i]["PredictionPercent"] > predictionThreshold && decisionMaker[i]["ContactType"].startsWith(contactType)) {
+      predictionThreshold = decisionMaker[i]["PredictionPercent"];
+      optimalBetaChange = decisionMaker[i]["BetaChange"];
+    }
+  }
+
+  if (predictionThreshold > 50) {
+    for (var i = 0; i < decisionMaker.length; i++) {
+      if (decisionMaker[i]["PredictionPercent"] > (predictionThreshold-5) && decisionMaker[i]["BetaChange"] > (optimalBetaChange-0.1) && decisionMaker[i]["ContactType"].startsWith(contactType)) {
+        selectedSettings.push(decisionMaker[i])
+      }
+    }
+    return selectedSettings
+  }
+
+  return selectedSettings;
+}
+
+async function extractPredictionModel(device, timestamp, hemisphere)
+{
+  let formData = new FormData();
+  formData.append("updatePredictionModels", true);
+  formData.append("requestData", device);
+  formData.append("requestTimestamp", timestamp);
+  formData.append("channelID", hemisphere);
+  const response = await fetch(window.location.origin + "/report/prediction", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200) {
+    var data = await response.json()
+    return data
+  } else {
+    return {}
+  }
+}
+
+async function updateRecordingContactType(event, device, timestamp, hemisphere)
+{
+  let formData = new FormData();
+  formData.append("updateRecordingContactType", event.value);
+  formData.append("requestData", device);
+  formData.append("requestTimestamp", timestamp);
+  formData.append("channelID", hemisphere);
+  const response = await fetch(window.location.origin + "/report/prediction", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200) {
+    return {}
+  } else {
+    return {}
+  }
+}
+
+async function requestRealtimeStreamData(timestamp, device)
+{
+  if (!streamData[device][timestamp].hasOwnProperty("Data"))
+  {
+    Swal.fire({
+      title: 'Downloading Data',
+      html: 'Please wait while data are being downloaded',
+      didOpen: () => {
+        Swal.showLoading()
+      },
+      showConfirmButton: false
+    })
+
+    let formData = new FormData();
+    formData.append("requestData", device);
+    formData.append("requestTimestamp", timestamp);
+    const response = await fetch(window.location.origin + "/report/brainsenseStreams", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+    if (response.status == 200)
+    {
+      var data = await response.json()
+      streamData[device][timestamp]["Data"] = data
+      streamData["CurrentID"] = streamData[device][timestamp]["ID"]
+      document.getElementById("BrainSenseStimulationPSDRefSwitch-Left").checked = false
+      document.getElementById("BrainSenseStimulationPSDRefSwitch-Left").checked = false
+
+      document.getElementById("StreamTable").dataset.timestamp = timestamp
+      document.getElementById("StreamTable").dataset.device = device
+    }
+
+    Swal.close()
+  }
+
+  if (streamData[device][timestamp].hasOwnProperty("Data"))
+  {
+    document.getElementById("BrainSenseStreamSpectrogramCard").style.display = ""
+
+    Swal.fire({
+      title: 'Rendering Data',
+      html: 'Please wait while data are being rendered',
+      didOpen: () => {
+        Swal.showLoading()
+      },
+      showConfirmButton: false
+    })
+    plotly_renderBrainSenseData(device, timestamp)
+    plotly_renderStimulationPSDData(device, timestamp)
+    plotly_renderTherapyEffects(device, timestamp)
+    Swal.close()
+  }
+}
+async function updateConfigurations()
+{
+  Swal.fire({
+    title: 'Reprocessing Data',
+    html: 'Please wait while data are being reprocessed in the server',
+    didOpen: () => {
+      Swal.showLoading()
+    },
+    showConfirmButton: false
+  })
+
+  var device = document.getElementById("StreamTable").dataset.device
+  var timestamp = document.getElementById("StreamTable").dataset.timestamp
+
+  let formData = new FormData();
+  selections = document.getElementsByClassName("config-selection")
+  formData.append("updateConfigurations", true);
+  formData.append("device", device);
+  formData.append("timestamp", timestamp);
+  for (var i = 0; i < selections.length; i++) {
+    formData.append(selections[i].dataset.key, selections[i].value);
+  }
+  const response = await fetch(window.location.origin + "/report/brainsenseStreams", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    var data = await response.json()
+
+    streamData = {}
+    var selectList = document.getElementById('BrainSenseStreamSelection')
+    displayRealtimeStreamCards(selectList.value)
+
+    streamData[device][timestamp]["Data"] = data
+    streamData["CurrentID"] = streamData[device][timestamp]["ID"]
+    document.getElementById("BrainSenseStimulationPSDRefSwitch-Left").checked = false
+    document.getElementById("BrainSenseStimulationPSDRefSwitch-Left").checked = false
+
+    document.getElementById("BrainSenseStreamSpectrogramCard").style.display = ""
+    Swal.fire({
+      title: 'Rendering Data',
+      html: 'Please wait while data are being rendered',
+      didOpen: () => {
+        Swal.showLoading()
+      },
+      showConfirmButton: false
+    })
+    plotly_renderBrainSenseData(device, timestamp)
+    plotly_renderStimulationPSDData(device, timestamp)
+    plotly_renderTherapyEffects(device, timestamp)
+    Swal.close()
+  }
+  else
+  {
+    Swal.close()
+  }
+}
+
+async function updateStimulationPSD(side)
+{
+  var toggle, type;
+  if (side == "Left") toggle = document.getElementById("BrainSenseStimulationPSDRefSwitch-Left")
+  else toggle = document.getElementById("BrainSenseStimulationPSDRefSwitch-Right")
+
+  if (toggle.checked) type = "Contralataral"
+  else type = "Ipsilateral"
+
+  const status = await updateStimulationPSDReference(toggle.dataset.timestamp, toggle.dataset.device, toggle.dataset.channel, type)
+  if (status != 200)
+  {
+    if (toggle.checked) toggle.checked = false
+    else toggle.checked = true
+  }
+  else
+  {
+    Swal.fire({
+      title: 'Rendering Data',
+      html: 'Please wait while data are being rendered',
+      didOpen: () => {
+        Swal.showLoading()
+      },
+      showConfirmButton: false
+    })
+    plotly_renderStimulationPSDData(toggle.dataset.device, toggle.dataset.timestamp)
+    plotly_renderTherapyEffects(toggle.dataset.device, toggle.dataset.timestamp)
+    Swal.close()
+  }
+}
+
+async function updateStimulationPSDReference(timestamp, device, channel, reference)
+{
+  Swal.fire({
+    title: 'Downloading Data',
+    html: 'Please wait while data are being downloaded',
+    didOpen: () => {
+      Swal.showLoading()
+    },
+    showConfirmButton: false
+  })
+
+  let formData = new FormData();
+  formData.append("requestData", device);
+  formData.append("requestTimestamp", timestamp);
+  formData.append("updateFigure", "Update Stimulation PSD Reference")
+  formData.append("StimReference", reference)
+  formData.append("ChannelID", channel)
+  const response = await fetch(window.location.origin + "/report/brainsenseStreams", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    var data = await response.json()
+    streamData[device][timestamp]["Data"][channel]["StimPSD"] = data
+  }
+  Swal.close()
+  return response.status
+}
+
+async function updatePredictionGraph(channel, reference, frequency)
+{
+  var timestamp = document.getElementById("StreamTable").dataset.timestamp
+  var device = document.getElementById("StreamTable").dataset.device
+  await updatePredictionCenterFrequency(timestamp, device, channel, reference, frequency)
+
+  Swal.fire({
+    title: 'Rendering Data',
+    html: 'Please wait while data are being rendered',
+    didOpen: () => {
+      Swal.showLoading()
+    },
+    showConfirmButton: false
+  })
+  plotly_renderTherapyEffects(device, timestamp)
+  Swal.close()
+}
+
+async function updatePredictionCenterFrequency(timestamp, device, channel, reference, frequency)
+{
+  Swal.fire({
+    title: 'Downloading Data',
+    html: 'Please wait while data are being downloaded',
+    didOpen: () => {
+      Swal.showLoading()
+    },
+    showConfirmButton: false
+  })
+
+  let formData = new FormData();
+  formData.append("requestData", device);
+  formData.append("requestTimestamp", timestamp);
+  formData.append("updateFigure", "Update Stimulation Boxplot")
+  formData.append("StimReference", reference)
+  formData.append("CenterFrequency", frequency)
+  formData.append("ChannelID", channel)
+  const response = await fetch(window.location.origin + "/report/brainsenseStreams", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    var data = await response.json()
+    streamData[device][timestamp]["Data"][channel]["StimPSD"] = data["StimPSD"]
+    streamData[device][timestamp]["Data"][channel]["PredictionTrend"] = data["PredictionTrend"]
+    streamData[device][timestamp]["Data"][channel]["PredictionFeatures"] = data["PredictionFeatures"]
+  }
+
+  Swal.close()
+}
+
+function plotly_renderBrainSenseData(deviceID, timestamp)
+{
+  var data = streamData[deviceID][timestamp]["Data"]
+
+  var graphFormat;
+  if (data["Channels"].length == 2) graphFormat = "Bilateral"
+  else graphFormat = "Unilateral"
+
+  var traces = []
+  for (var i = 0; i < data["Channels"].length; i++)
+  {
+    var timeArray = new Array(data[data["Channels"][i]]["RawData"].length)
+    for (var t = 0; t < timeArray.length; t++) timeArray[t] = new Date(timestamp*1000 + t*4)
+
+    var yaxisID;
+    if (graphFormat == "Unilateral") yaxisID = "y" + String(i+1)
+    else yaxisID = "y" + String(i+1)
+
+    var trace = {
+      x: timeArray,
+      y: data[data["Channels"][i]]["RawData"],
+      yaxis: yaxisID,
+      type: 'scatter',
+      mode: "lines",
+      line: {color: "#000000", width: 0.5},
+      hovertemplate: "  %{y:.2f} μV <extra></extra>",
+      showlegend: false
+    }
+    traces.push(trace)
+  }
+
+  const stimulationLineColor = ["#FCA503","#253EF7"]
+  for (var i = 0; i < data["Stimulation"].length; i++)
+  {
+    if (graphFormat == "Unilateral") yaxisID = "y3"
+    else yaxisID = "y5"
+
+    var timeArray = new Array(data["Stimulation"][i]["Time"].length)
+    for (var t = 0; t < timeArray.length; t++) timeArray[t] = new Date(timestamp*1000 + data["Stimulation"][i]["Time"][t]*1000)
+
+    var trace = {
+      x: timeArray,
+      y: data["Stimulation"][i]["Amplitude"],
+      yaxis: yaxisID,
+      type: 'scatter',
+      mode: "lines",
+      name: data["Channels"][i],
+      line: {color: stimulationLineColor[i], width: 2, shape: "hv"},
+      hovertemplate: "  %{y:.2f} mA <extra></extra>",
+      showlegend: true
+    }
+    traces.push(trace)
+  }
+
+  for (var i = 0; i < data["Channels"].length; i++)
+  {
+    var timeArray = new Array(data[data["Channels"][i]]["Spectrogram"]["Time"].length)
+    for (var t = 0; t < data[data["Channels"][i]]["Spectrogram"]["Time"].length; t++)
+    {
+      const alignedTimestamp = timestamp*1000 + data[data["Channels"][i]]["Spectrogram"]["Time"][t]*1000
+      timeArray[t] = new Date(alignedTimestamp)
+    }
+
+    var yaxisID;
+    if (graphFormat == "Unilateral") yaxisID = "y" + String(i+1+1)
+    else yaxisID = "y" + String(i+1+2)
+
+    var trace = {
+      x: timeArray,
+      y: data[data["Channels"][i]]["Spectrogram"]["Frequency"],
+      z: data[data["Channels"][i]]["Spectrogram"]["Power"],
+      yaxis: yaxisID,
+      type: 'heatmap',
+      zsmooth: "best",
+      coloraxis: "coloraxis",
+      zmax: 20,
+      zmin: 20,
+      hovertemplate: "  %{x} <br>" + "  %{y:.1f} Hz<br>" + "  %{z:.2f} dB<extra></extra>",
+    }
+    traces.push(trace)
+  }
+
+  if (graphFormat == "Unilateral") {
+    var layout = {
+      grid: {rows: 3, columns: 1, pattern: "coupled"},
+      xaxis: {domain: [0, 1]},
+      annotations: [],
+      yaxis: {
+        domain: [0.7, 1],
+        showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+        ticks: "outside", range: [-100,100], zeroline: false,
+        title: {text: "Amplitude (μV)", font: {size: 15}},
+        color: "#000000",
+      },
+      yaxis2: {
+        domain: [0.35, 0.65],
+        showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+        ticks: "outside", range: [0,100], zeroline: false,
+        title: {text: "Frequency (Hz)", font: {size: 15}},
+        color: "#000000",
+      },
+      yaxis3: {
+        domain: [0, 0.3],
+        showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+        ticks: "outside", range: [0,6], zeroline: false,
+        title: {text: "Stimulation (mA)", font: {size: 15}},
+        color: "#000000",
+      },
+      coloraxis: {
+        domain: [0.95,1],
+        colorbar: {y: 0.5, len: 0.3, title: {text: "Powerr (dB)", side: "right", font: {size: 15}}},
+        showscale: true,
+        colorscale: "Jet",
+        cmin: data[data["Channels"][0]]["Spectrogram"]["ColorRange"][0], cmax: data[data["Channels"][0]]["Spectrogram"]["ColorRange"][1],
+      },
+      legend: {
+        yanchor: "top",
+        y: 0.10,
+      }
+    };
+    layout["annotations"].push({text: streamData[deviceID][timestamp]["Channels"][0], font: {size: 16}, showarrow: false, x: 0.45, y: 1, xref: "paper", yref: "paper", yanchor: "bottom"})
+    document.getElementById("BrainSenseStreamSpectrogramChart").style.height = String(3*300) + "px"
+  } else {
+    var layout = {
+      grid: {rows: 5, columns: 1, pattern: "coupled"},
+      xaxis: {domain: [0, 1]},
+      annotations: [],
+      yaxis: {
+        domain: [0.85, 1],
+        showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+        ticks: "outside", range: [-100,100], zeroline: false,
+        title: {text: "Amplitude (μV)", font: {size: 15}},
+        color: "#000000",
+      },
+      yaxis2: {
+        domain: [0.65, 0.8],
+        showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+        ticks: "outside", range: [-100,100], zeroline: false,
+        title: {text: "Amplitude (μV)", font: {size: 15}},
+        color: "#000000",
+      },
+      yaxis3: {
+        domain: [0.45, 0.6],
+        showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+        ticks: "outside", range: [0,100], zeroline: false,
+        title: {text: "Frequency (Hz)", font: {size: 15}},
+        color: "#000000",
+      },
+      yaxis4: {
+        domain: [0.25, 0.4],
+        showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+        ticks: "outside", range: [0,100], zeroline: false,
+        title: {text: "Frequency (Hz)", font: {size: 15}},
+        color: "#000000",
+      },
+      yaxis5: {
+        domain: [0, 0.2],
+        showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+        ticks: "outside", range: [0,6], zeroline: false,
+        title: {text: "Stimulation (mA)", font: {size: 15}},
+        color: "#000000",
+      },
+      coloraxis: {
+        colorbar: {y: 0.42, len: 0.4, title: {text: "Powerr (dB)", side: "right", font: {size: 15}}},
+        showscale: true,
+        colorscale: "Jet",
+        cmin: -20, cmax: 20,
+      },
+      legend: {
+        yanchor: "top",
+        y: 0.10,
+      }
+    };
+    layout["annotations"].push({text: streamData[deviceID][timestamp]["Channels"][0], font: {size: 16}, showarrow: false, x: 0.45, y: 1, xref: "paper", yref: "paper", yanchor: "bottom"})
+    layout["annotations"].push({text: streamData[deviceID][timestamp]["Channels"][1], font: {size: 16}, showarrow: false, x: 0.45, y: 0.8, xref: "paper", yref: "paper", yanchor: "bottom"})
+    document.getElementById("BrainSenseStreamSpectrogramChart").style.height = String(5*300) + "px"
+  }
+
+  Plotly.newPlot('BrainSenseStreamSpectrogramChart', traces, layout)
+}
+
+var plotly_singleclicked = false;
+var plotly_timeout;
+function plotly_renderStimulationPSDData(deviceID, timestamp)
+{
+  var data = streamData[deviceID][timestamp]["Data"]
+
+  const chartTitles = ["BrainSenseStimulationPSDChart-Left","BrainSenseStimulationPSDChart-Right"]
+  document.getElementById(chartTitles[0].replace("Chart","Card")).style.display = "none"
+  document.getElementById(chartTitles[1].replace("Chart","Card")).style.display = "none"
+  for (var i = 0; i < data["Channels"].length; i++)
+  {
+    var toggle = document.getElementById(chartTitles[i].replace("Chart","RefSwitch"))
+
+    var traces = []
+    for (var j = 0; j < data[data["Channels"][i]]["StimPSD"].length; j++)
+    {
+      var trace = {
+        x: data[data["Channels"][i]]["StimPSD"][j]["Frequency"],
+        y: data[data["Channels"][i]]["StimPSD"][j]["PSD"],
+        type: 'scatter',
+        mode: "lines",
+        name: "{0} mA".format(data[data["Channels"][i]]["StimPSD"][j]["Stimulation"].toFixed(2)),
+        line: {color: data[data["Channels"][i]]["StimPSD"][j]["StimulationColor"], width: 2},
+        meta: "{0} mA".format(data[data["Channels"][i]]["StimPSD"][j]["Stimulation"].toFixed(2)),
+        hovertemplate: "%{meta} %{y:.2f} μV<sup>2</sup>/Hz<extra></extra>",
+        showlegend: true,
+        channel: data["Channels"][i],
+        reference: toggle.checked,
+      }
+      traces.push(trace)
+    }
+
+    var layout = {
+      title: {
+        text: streamData[deviceID][timestamp]["Channels"][i] + " Stimulation PSDs"
+      },
+      yaxis: {
+        type: "log",
+        showgrid: true,
+        gridcolor: "#DDDDDD",
+        showline: true,
+        linecolor: "#000000",
+        ticks: "outside",
+        range: [-3,1],
+        zeroline: false,
+        title: {text: "Power (μV<sup>2</sup>/Hz)", font: {size: 15}},
+        tickfont_size: 12,
+        tickmode: "array",
+        tickvals: [0.001,0.01,0.1,1,10],
+        color: "#000000",
+      },
+      xaxis: {
+        showgrid: true,
+        showline: true,
+        ticks: "outside",
+        range: [0,100],
+        showticklabels: true,
+        zeroline: false,
+        title: {text: "Frequency (Hz)", font: {size: 15}},
+      },
+      hovermode: "x"
+    };
+
+    document.getElementById(chartTitles[i].replace("Chart","Card")).style.display = ""
+    document.getElementById(chartTitles[i]).style.height = String(600) + "px"
+    document.getElementById(chartTitles[i].replace("Chart","RefSwitch")).dataset.channel = data["Channels"][i]
+    document.getElementById(chartTitles[i].replace("Chart","RefSwitch")).dataset.device = deviceID
+    document.getElementById(chartTitles[i].replace("Chart","RefSwitch")).dataset.timestamp = timestamp
+    Plotly.newPlot(chartTitles[i], traces, layout)
+
+    document.getElementById(chartTitles[i]).on("plotly_click", function(data) {
+      if (plotly_singleclicked) {
+        plotly_singleclicked = false
+        clearTimeout(plotly_timeout)
+      }
+      else {
+        plotly_singleclicked = true
+        plotly_timeout = setTimeout(function() {
+          if (data["points"][0]["data"]["reference"]) type = "Contralataral"
+          else type = "Ipsilateral"
+          updatePredictionGraph(data["points"][0]["data"]["channel"], type,  data["points"][0]["x"])
+          plotly_singleclicked = false
+        }, 250);
+      }
+    })
+  }
+}
+
+function plotly_renderTherapyEffects(deviceID, timestamp)
+{
+  var data = streamData[deviceID][timestamp]["Data"]
+
+  const chartTitles = ["BrainSenseTherapyEffectChart-Left","BrainSenseTherapyEffectChart-Right"]
+  document.getElementById(chartTitles[0].replace("Chart","Card")).style.display = "none"
+  document.getElementById(chartTitles[1].replace("Chart","Card")).style.display = "none"
+  for (var i = 0; i < data["Channels"].length; i++)
+  {
+    var traces = []
+    for (var j = 0; j < data[data["Channels"][i]]["StimPSD"].length; j++)
+    {
+      var xdata = new Array(data[data["Channels"][i]]["StimPSD"][j]["SpectralFeatures"].length)
+      for (var k = 0; k < xdata.length; k++) xdata[k] = data[data["Channels"][i]]["StimPSD"][j]["Stimulation"]
+
+      var trace = {
+        x: xdata,
+        y: data[data["Channels"][i]]["StimPSD"][j]["SpectralFeatures"],
+        type: "box",
+        name: "{0} mA".format(data[data["Channels"][i]]["StimPSD"][j]["Stimulation"].toFixed(2)),
+        width: 0.2,
+        marker: {color: 'rgb(46, 20, 105)'},
+        line: {color: 'rgb(46, 20, 105)'},
+        hovertemplate: "<extra></extra>",
+        showlegend: false
+      }
+      traces.push(trace)
+    }
+
+    var trace = {
+      x: data[data["Channels"][i]]["PredictionTrend"]["StimulationAmplitude"],
+      y: data[data["Channels"][i]]["PredictionTrend"]["FittedLine"],
+      type: 'scatter',
+      mode: "lines",
+      line: {color: "#DD0000", width: 5},
+      hovertemplate: "<extra></extra>",
+      showlegend: false
+    }
+    traces.push(trace)
+
+    var layout = {
+      title: {
+        text: streamData[deviceID][timestamp]["Channels"][i] + " on {0}Hz Power".format(data[data["Channels"][i]]["StimPSD"][0]["CenterFrequency"])
+      },
+      yaxis: {
+        type: "linear",
+        showgrid: true,
+        gridcolor: "#DDDDDD",
+        showline: true,
+        linecolor: "#000000",
+        ticks: "outside",
+        zeroline: false,
+        title: {text: "Power (μV<sup>2</sup>/Hz)", font: {size: 15}},
+        color: "#000000",
+      },
+      xaxis: {
+        showgrid: true,
+        showline: true,
+        ticks: "outside",
+        range: [-0.3,6.3],
+        showticklabels: true,
+        zeroline: false,
+        title: {text: "Stimulation Amplitude (mA)", font: {size: 15}},
+      }
+    };
+
+    document.getElementById(chartTitles[i].replace("Chart","Card")).style.display = ""
+    document.getElementById(chartTitles[i]).style.height = String(600) + "px"
+    Plotly.newPlot(chartTitles[i], traces, layout)
+  }
+
+}
+
+</script>
+{% endblock %}

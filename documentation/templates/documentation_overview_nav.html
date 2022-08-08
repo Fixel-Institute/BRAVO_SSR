@@ -1,0 +1,124 @@
+{% extends 'documentation_basic.html' %}
+{% load static %}
+
+{% block content %}
+<div class="docs-wrapper">
+  <div id="docs-sidebar" class="docs-sidebar">
+    <div class="top-search-box d-lg-none p-3">
+      <form class="search-form">
+        <input type="text" placeholder="Search the docs..." name="search" class="form-control search-input">
+        <button type="submit" class="btn search-btn" value="Search"><i class="fas fa-search"></i></button>
+      </form>
+    </div>
+    <nav id="docs-nav" class="docs-nav navbar">
+	    <ul class="section-items list-unstyled nav flex-column pb-3">
+		    <li class="nav-item section-title">
+          <a class="nav-link scrollto" href="#section-introduction">
+            <span class="theme-icon-holder me-2"><i class="fa-solid fa-book"></i></span>
+            Overview
+          </a>
+        </li>
+		    <li class="nav-item section-title mt-3">
+          <a class="nav-link scrollto" href="#section-authentication">
+            <span class="theme-icon-holder me-2">
+              <i class="fa-solid fa-user-lock"></i>
+            </span>
+            Authentication
+          </a>
+        </li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-auth-registration">Registration</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-auth-login">Log In</a></li>
+		    <li class="nav-item section-title mt-3">
+          <a class="nav-link scrollto" href="#section-patients">
+            <span class="theme-icon-holder me-2">
+              <i class="fa-solid fa-table"></i>
+            </span>
+            Patient Table
+          </a>
+        </li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-patient-deidnetified">Deidentified Patients</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-patient-idnetified">Identified Patients</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-patient-report">Session Report</a></li>
+		    <li class="nav-item section-title mt-3">
+          <a class="nav-link scrollto" href="#section-patient-overview">
+            <span class="theme-icon-holder me-2">
+              <i class="fa-solid fa-circle-user"></i>
+            </span>
+            Patient Overview
+          </a>
+        </li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-patient-edit">Edit Patient Information</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-patient-upload">Upload JSON Data (Research-Only)</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-patient-navigation">Analysis Navigation</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-patient-delete">Delete Data</a></li>
+		    <li class="nav-item section-title mt-3">
+          <a class="nav-link scrollto" href="#section-therapyhistory">
+            <span class="theme-icon-holder me-2">
+              <i class="fa-solid fa-file-prescription"></i>
+            </span>
+            Therapy History
+          </a>
+        </li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-therapyhistory-changelog">Therapy Change Log</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-therapyhistory-configurations">Past Therapy Configurations</a></li>
+		    <li class="nav-item section-title mt-3">
+          <a class="nav-link scrollto" href="#section-brainsensesurvey">
+            <span class="theme-icon-holder me-2">
+              <i class="fa-solid fa-square-poll-vertical"></i>
+            </span>
+            BrainSense Survey
+          </a>
+        </li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-brainsensesurvey-individual">Power Spectrum across Channels</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-brainsensesurvey-acrosstime">Power Spectrum across Time</a></li>
+		    <li class="nav-item section-title mt-3">
+          <a class="nav-link scrollto" href="#section-brainsensestreaming">
+            <span class="theme-icon-holder me-2">
+              <i class="fa-solid fa-file-waveform"></i>
+            </span>
+            BrainSense Streaming
+          </a>
+        </li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-brainsensestreaming-selector">Select Recording to View</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-brainsensestreaming-summary">Neural Recording Summary</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-brainsensestreaming-stimulation">Effect of Stimulation</a></li>
+		    <li class="nav-item section-title mt-3">
+          <a class="nav-link scrollto" href="#section-indefinitestreaming">
+            <span class="theme-icon-holder me-2">
+              <i class="fa-solid fa-file-waveform"></i>
+            </span>
+            Indefinite Streaming
+          </a>
+        </li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-indefinitestreaming-summary">Select Recording to View</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-indefinitestreaming-multiple">Multiple Selection</a></li>
+		    <li class="nav-item section-title mt-3">
+          <a class="nav-link scrollto" href="#section-chroniclfps">
+            <span class="theme-icon-holder me-2">
+              <i class="fa-solid fa-house-signal"></i>
+            </span>
+            Chronic LFPs
+          </a>
+        </li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-chroniclfps-summary">Chronic LFP Overview</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-chroniclfps-circadian">Circadian Rhythms</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-chroniclfps-eventlockpower">Event-Locked Power</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-chroniclfps-events">Event PSDs</a></li>
+	    </ul>
+    </nav>
+  </div>
+
+  <div class="docs-content">
+    <div class="container">
+      {% block article %}
+      {% endblock %}
+      <footer class="footer">
+        <div class="container text-center py-5">
+          <!--/* This template is free as long as you keep the footer attribution link. If you'd like to use the template without the attribution link, you can buy the commercial license via our website: themes.3rdwavemedia.com Thank you for your support. :) */-->
+          <small class="copyright">Designed with <span class="sr-only">love</span><i class="fas fa-heart" style="color: #fb866a;"></i> by <a class="theme-link" href="http://themes.3rdwavemedia.com" target="_blank">Xiaoying Riley</a> for developers</small>
+        </div>
+      </footer>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,442 @@
+{% extends 'dashboard_basic.html' %}
+{% load static %}
+
+{% block pageTitle %} BrainSense Survey - Percept Analysis Platform {% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+    <li class="breadcrumb-item text-sm">
+      <a class="text-white" href="javascript:;">
+        <i class="ni ni-app"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/patients">Patients</a></li>
+    <li class="breadcrumb-item text-sm text-white active" aria-current="page"><a class="opacity-5 text-white" href="/patientOverview">{{Patient.Name}}</a></li>
+  </ol>
+  <h6 class="font-weight-bolder mb-0 text-white">Indefinite Streams</h6>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-sm-12 col-lg-6 mb-4">
+    <label class="form-label">Choose Indefinite Stream Day</label>
+    <select class="form-control" name="IndefiniteStreamSelection" id="IndefiniteStreamSelection" onchange="selectDisplay()">
+    </select>
+  </div>
+
+  <div class="col-12 mb-4">
+    <div id="StreamSelectionsCard" class="card card-frame" style="display: none;">
+      <div class="card-header pb-0 pt-3 bg-transparent border-bottom">
+        <h5 class="text-capitalize">Stream Selection</h5>
+      </div>
+      <div id="StreamButtonSection" class="card-body border-bottom">
+      </div>
+      <div class="card-footer">
+        <div class="d-flex">
+          <button type="button" class="btn btn-lg btn-primary mb-0" onclick="requestIndefiniteStreamData()">
+            Retrieve and Display
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 mb-4">
+    <div id="IndefiniteStreamRawCard" class="card z-index-0 h-100" style="display: none;">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <h6 class="text-capitalize">Indefinite Streams</h6>
+        <a href="javascript:exportCurrentStream();" class="btn btn-icon btn-outline-black">
+          <span class="btn-inner--text">Export</span>
+          <span class="btn-inner--icon ms-2"><i class="ni ni-folder-17"></i></span>
+        </a>
+      </div>
+      <div class="card-body p-3">
+        <div id="MontageStreamRawChart" class="chart">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 mb-4">
+    <div id="IndefiniteStreamSpectrogramCard" class="card z-index-0 h-100" style="display: none;">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <h6 class="text-capitalize">Indefinite Streams Time-Frequency Plot</h6>
+      </div>
+      <div class="card-body p-3">
+        <div id="MontageStreamSpectrogramChart" class="chart">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.plot.ly/plotly-2.8.3.min.js"></script>
+<script src="{% static 'js/plugins/choices.min.js' %}"></script>
+<script>
+
+$(document).ready(function() {
+  document.getElementById('montageStreamNavbar').classList.add("active")
+  requestIndefiniteStreamOverview()
+})
+
+var streamOverview;
+async function requestIndefiniteStreamOverview()
+{
+  let formData = new FormData();
+  formData.append("requestOverview", '{{PatientID}}');
+  const response = await fetch(window.location.origin + "/report/indefiniteStreams", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    streamOverview = await response.json()
+    selectList = document.getElementById('IndefiniteStreamSelection')
+    if (streamOverview.length > 0)
+    {
+      document.getElementById('StreamSelectionsCard').style.display = ""
+
+      indefiniteStreams = []
+      for (var i = 0; i < streamOverview.length; i++) {
+        var timestruct = new Date(streamOverview[i]["Timestamp"]*1000)
+        if (!indefiniteStreams.includes(timestruct.toLocaleDateString()))
+        {
+          var option = document.createElement("option");
+          option.value = timestruct.toLocaleDateString();
+          option.text = formatDateString(timestruct, "{%B} {%D}, {%Y} - {%H}:{%M} {%P}");
+          selectList.appendChild(option);
+          indefiniteStreams.push(timestruct.toLocaleDateString())
+        }
+      }
+    }
+    const surveySelector = new Choices(selectList, {
+      shouldSort: false
+    });
+    populateSelectionCard(selectList.value)
+  }
+}
+
+var streamData = {};
+var viewData = {};
+async function requestIndefiniteStreamData()
+{
+  buttonSelection = document.getElementById('StreamButtonSection')
+  buttons = buttonSelection.getElementsByTagName("BUTTON")
+
+  timestamps = []
+  devices = []
+  viewData = {"timestamp": [], "device": []}
+  for (var i = 0; i < buttons.length; i++)
+  {
+    if (buttons[i].classList.contains("btn-success"))
+    {
+      viewData["timestamp"].push(buttons[i].dataset.timestamp)
+      viewData["device"].push(buttons[i].dataset.device)
+      if (!streamData.hasOwnProperty(buttons[i].dataset.device))
+      {
+        timestamps.push(buttons[i].dataset.timestamp)
+        devices.push(buttons[i].dataset.device)
+      }
+      else if (!streamData[buttons[i].dataset.device].hasOwnProperty(buttons[i].dataset.timestamp))
+      {
+        timestamps.push(buttons[i].dataset.timestamp)
+        devices.push(buttons[i].dataset.device)
+      }
+    }
+  }
+
+  Swal.fire({
+    title: 'Downloading Data',
+    html: 'Please wait while data are being downloaded',
+    didOpen: () => {
+      Swal.showLoading()
+    },
+    showConfirmButton: false
+  })
+
+  if (timestamps.length > 0)
+  {
+    let formData = new FormData();
+    formData.append("requestData", timestamps);
+    formData.append("requestDevice", devices);
+    const response = await fetch(window.location.origin + "/report/indefiniteStreams", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+    if (response.status == 200)
+    {
+      data = await response.json()
+      for (var i = 0; i < data.length; i++)
+      {
+        if (!streamData.hasOwnProperty(data[i]["DeviceID"]))
+        {
+          streamData[data[i]["DeviceID"]] = {}
+        }
+        streamData[data[i]["DeviceID"]][data[i]["Timestamp"]] = data[i]
+      }
+    }
+    else
+    {
+      alert("Data Retrieval Failure")
+    }
+  }
+  Swal.close()
+
+  document.getElementById("IndefiniteStreamSpectrogramCard").style.display = ""
+  document.getElementById("IndefiniteStreamRawCard").style.display = ""
+  renderSelectedData(viewData)
+}
+
+function selectDisplay()
+{
+  selectList = document.getElementById('IndefiniteStreamSelection')
+  populateSelectionCard(selectList.value)
+}
+
+function populateSelectionCard(selectedDate)
+{
+  buttonSelection = document.getElementById('StreamButtonSection')
+  buttonSelection.innerHTML = ""
+  for (var i = 0; i < streamOverview.length; i++) {
+    timestruct = new Date(streamOverview[i]["Timestamp"]*1000)
+    if (timestruct.toLocaleDateString() == selectedDate) {
+      var button = document.createElement("button");
+      button.classList.add(...["btn","btn-outline-danger","btn-lg","mx-4","mb-2","mt-2"])
+      text = streamOverview[i]["DeviceName"] + ": " + timestruct.toLocaleTimeString() + " - " + new Date(streamOverview[i]["Timestamp"]*1000 + streamOverview[i]["Duration"]*1000).toLocaleTimeString() + " (" + Math.round(streamOverview[i]["Duration"]) + " sec)"
+      button.innerText = text
+      button.dataset.value = text
+      button.dataset.timestamp = streamOverview[i]["Timestamp"]
+      button.dataset.device = streamOverview[i]["DeviceID"]
+      button.addEventListener("click",toggleSelection)
+      buttonSelection.appendChild(button);
+    }
+  }
+}
+
+function toggleSelection(event)
+{
+  if (event.target.tagName == "SPAN") button = event.target.parentElement
+  else button = event.target
+
+  if (button.classList.contains("btn-outline-danger"))
+  {
+    button.classList.add("btn-success")
+    button.classList.remove("btn-outline-danger")
+    button.innerHTML = `<span class="btn-inner--icon"><i class="fa fa-check"></i></span><span class="btn-inner--text"> ` + button.dataset.value + "</span>"
+  }
+  else
+  {
+    button.classList.remove("btn-success")
+    button.classList.add("btn-outline-danger")
+    button.innerHTML = button.dataset.value
+  }
+}
+
+function renderSelectedData(viewData)
+{
+  Swal.fire({
+    title: 'Downloading Data',
+    html: 'Please wait while data are being rendered',
+    didOpen: () => {
+      Swal.showLoading()
+    },
+    showConfirmButton: false
+  })
+
+  plotly_indefiniteStreams(viewData)
+
+  Swal.close()
+}
+
+function plotly_indefiniteStreams(viewData)
+{
+  var uniqueChannels = []
+  var uniqueChannelNames = []
+  for (var i = 0; i < viewData["timestamp"].length; i++)
+  {
+    var data = streamData[viewData["device"][i]][viewData["timestamp"][i]]
+    for (var j = 0; j < data["Channels"].length; j++)
+    {
+      if (!uniqueChannels.includes(data["Channels"][j])) {
+        uniqueChannels.push(data["Channels"][j])
+        uniqueChannelNames.push(data["ChannelNames"][j])
+      }
+    }
+  }
+
+  // Time Domain Data View
+  var traces = []
+  for (var i = 0; i < viewData["timestamp"].length; i++)
+  {
+    var data = streamData[viewData["device"][i]][viewData["timestamp"][i]]
+    var timeArray = new Array(data[uniqueChannels[0]].length)
+    for (var t = 0; t < timeArray.length; t++) timeArray[t] = new Date(viewData["timestamp"][i]*1000 + t*4)
+
+    for (var j = 0; j < data["Channels"].length; j++)
+    {
+      var yaxisID = "y"+String(uniqueChannels.indexOf(data["Channels"][j])+1)
+      var trace = {
+        x: timeArray,
+        y: data[data["Channels"][j]],
+        yaxis: yaxisID,
+        type: 'scatter',
+        mode: "lines",
+        line: {color: "#000000", width: 0.5},
+        hovertemplate: "  %{y:.2f} μV <extra></extra>",
+        showlegend: false
+      }
+      traces.push(trace)
+    }
+  }
+
+  var layout = {
+    grid: {rows: uniqueChannels.length, columns: 1, pattern: "coupled"},
+    xaxis: {domain: [0, 0.9]},
+    annotations: []
+  };
+
+  var subplotHeight = 1/uniqueChannels.length
+  var subplotGap = subplotHeight*0.15
+  for (var i = 0; i < uniqueChannels.length; i++)
+  {
+    if (i == 0) key = "yaxis"
+    else key = "yaxis"+String(i+1)
+    var domainLimit = [1-subplotHeight*(i+1)+subplotGap, 1-subplotHeight*i]
+    layout[key] = {
+      domain: domainLimit,
+      showgrid: true,
+      gridcolor: "#DDDDDD",
+      showline: true,
+      linecolor: "#000000",
+      ticks: "outside",
+      range: [-100,100],
+      zeroline: false,
+      title: {text: "Amplitude (μV)", font: {size: 15}},
+      tickfont_size: 12,
+      color: "#000000",
+    }
+    layout["annotations"].push({text: uniqueChannelNames[i], font: {size: 16}, showarrow: false, x: 0.45, y: domainLimit[1], xref: "paper", yref: "paper", yanchor: "bottom"})
+  }
+
+  document.getElementById("MontageStreamRawChart").style.height = String(uniqueChannels.length*200) + "px"
+  Plotly.newPlot('MontageStreamRawChart', traces, layout)
+
+  // Spectrograms
+  var traces = []
+  for (var i = 0; i < viewData["timestamp"].length; i++)
+  {
+    var data = streamData[viewData["device"][i]][viewData["timestamp"][i]]
+
+    for (var j = 0; j < data["Channels"].length; j++)
+    {
+      var xdata = new Array(data["Spectrums"][data["Channels"][j]]["Time"].length)
+      for (var t = 0; t < data["Spectrums"][data["Channels"][j]]["Time"].length; t++)
+      {
+        var timestamp = viewData["timestamp"][i]*1000 + data["Spectrums"][data["Channels"][j]]["Time"][t]*1000
+        xdata[t] = new Date(timestamp)
+      }
+
+      var yaxisID = "y"+String(uniqueChannels.indexOf(data["Channels"][j])+1)
+
+      var trace = {
+        x: xdata,
+        y: data["Spectrums"][data["Channels"][j]]["Frequency"],
+        z: data["Spectrums"][data["Channels"][j]]["logPower"],
+        yaxis: yaxisID,
+        type: 'heatmap',
+        zsmooth: "best",
+        coloraxis: "coloraxis",
+        zmax: 20,
+        zmin: 20,
+        hovertemplate: "  %{x} <br>" + "  %{y:.1f} Hz<br>" + "  %{z:.2f} dB<extra></extra>",
+      }
+      traces.push(trace)
+    }
+  }
+
+  for (var i = 0; i < uniqueChannels.length; i++)
+  {
+    if (i == 0) key = "yaxis"
+    else key = "yaxis"+String(i+1)
+    var domainLimit = [1-subplotHeight*(i+1)+subplotGap, 1-subplotHeight*i]
+    layout[key] = {
+      domain: domainLimit,
+      showgrid: true,
+      gridcolor: "#DDDDDD",
+      showline: true,
+      linecolor: "#000000",
+      ticks: "outside",
+      range: [0,100],
+      zeroline: false,
+      title: {text: "Frequency (Hz)", font: {size: 15}},
+      tickfont_size: 12,
+      color: "#000000",
+    }
+  }
+
+  layout["coloraxis"] = {
+    colorbar: {y: 0.5, len: 1, title: {text: "Powerr (dB)", side: "right", font: {size: 15}}},
+    showscale: true,
+    colorscale: "Jet",
+    cmin: -20, cmax: 20,
+  }
+
+  document.getElementById("MontageStreamSpectrogramChart").style.height = String(uniqueChannels.length*200) + "px"
+  Plotly.newPlot('MontageStreamSpectrogramChart', traces, layout)
+}
+
+function exportCurrentStream() {
+  var uniqueChannels = []
+  var uniqueChannelNames = []
+  for (var i = 0; i < viewData["timestamp"].length; i++)
+  {
+    var data = streamData[viewData["device"][i]][viewData["timestamp"][i]]
+    for (var j = 0; j < data["Channels"].length; j++)
+    {
+      if (!uniqueChannels.includes(data["Channels"][j])) {
+        uniqueChannels.push(data["Channels"][j])
+        uniqueChannelNames.push(data["ChannelNames"][j])
+      }
+    }
+  }
+
+  var csvData = "Time"
+  for (var i = 0; i < uniqueChannelNames.length; i++) {
+    csvData += "," + uniqueChannelNames[i];
+  }
+  csvData += "\n"
+
+  console.log(viewData["timestamp"])
+
+  for (var i = 0; i < viewData["timestamp"].length; i++)
+  {
+    var data = streamData[viewData["device"][i]][viewData["timestamp"][i]]
+    var timeArray = new Array(data[uniqueChannels[0]].length)
+    for (var t = 0; t < timeArray.length; t++) timeArray[t] = viewData["timestamp"][i] + t*0.004
+    for (var t = 0; t < timeArray.length; t++)
+    {
+      csvData += timeArray[t];
+      var signalArray = new Array(uniqueChannelNames.length)
+      for (var j = 0; j < signalArray.length; j++) {
+        var index = data["Channels"].indexOf(uniqueChannels[j])
+        if (index >= 0) {
+          signalArray[j] = data[data["Channels"][index]][t]
+        } else {
+          signalArray[j] = "nan"
+        }
+      }
+      for (var j = 0; j < signalArray.length; j++) {
+        csvData += "," + signalArray[j]
+      }
+      csvData += "\n"
+    }
+  }
+
+  var downloader = document.createElement('a');
+  downloader.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvData);
+  downloader.target = '_blank';
+  downloader.download = '{{Patient.Name}} Realtime Stream.csv';
+  downloader.click();
+}
+
+</script>
+{% endblock %}

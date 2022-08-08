@@ -1,0 +1,238 @@
+{% extends 'dashboard_basic.html' %}
+{% load static %}
+{% load SessionReportTemplateFilter %}
+
+{% block pageTitle %} Patient List - Percept Analysis Platform {% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+    <li class="breadcrumb-item text-sm">
+      <a class="text-white" href="javascript:;">
+        <i class="ni ni-app"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+    <li class="breadcrumb-item text-sm text-white active" aria-current="page"><a class="opacity-5 text-white" href="/patientOverview">{{Patient.Name}}</a></li>
+  </ol>
+  <h6 class="font-weight-bolder mb-0 text-white">Session Report</h6>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <!-- Card header -->
+      <div class="card-header">
+        <h5 class="mb-0">Session Overview for Visit of Date {{SessionOverview.Overall.SessionDate}}</h5>
+        <p class="text-sm mb-0">
+        </p>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-12 mb-4">
+            <b>Patient Name</b>: {{SessionOverview.Overall.PatientInformation.PatientFirstName}} {{SessionOverview.Overall.PatientInformation.PatientLastName}}
+            <br>
+            <b>Patient DOB</b>: {{SessionOverview.Overall.PatientInformation.PatientDateOfBirth | updateDateOfBirth}}
+            <br>
+            <b>Patient ID</b>: {{SessionOverview.Overall.PatientInformation.PatientId}}
+          </div>
+          <div class="col-6 mb-4">
+            <h5> Device Information </h5>
+            <b>Device Name</b>: {{SessionOverview.Overall.DeviceInformation.Neurostimulator}} ({{SessionOverview.Overall.DeviceInformation.NeurostimulatorModel}})
+            <br>
+            <b>Device ID</b>: {{SessionOverview.Overall.DeviceInformation.NeurostimulatorSerialNumber}}
+            <br>
+            <b>Device Location</b>: {{SessionOverview.Overall.DeviceInformation.NeurostimulatorLocation | formatLocationString}}
+            <br>
+            <b>Device Implant Date</b>: {{SessionOverview.Overall.DeviceInformation.ImplantDate | updateDateOfBirth}}
+            <br>
+            <b>Battery Life Left</b>: {{SessionOverview.Overall.BatteryInformation.EstimatedBatteryLifeMonths | formatBatteryString}} ({{SessionOverview.Overall.BatteryInformation.BatteryPercentage}}%)
+          </div>
+          <div class="col-6 mb-4">
+            <h5> Electrode Configurations </h5>
+            {% for lead in SessionOverview.Overall.LeadConfiguration %}
+            <b>Electrode Type</b>: {{lead.Model | formatLeadNames}} ({{lead.ElectrodeNumber | formatLeadNames }})
+            <br>
+            <b>Electrode Location</b>: {{lead.Hemisphere | formatLeadNames}} {{lead.LeadLocation | formatLeadNames}}
+            <br>
+            {% endfor %}
+          </div>
+          <div class="col-6 mb-4">
+            <h5> Previous Groups </h5>
+            {% for therapy in SessionOverview.Therapy.PreviousGroups %}
+            <div class="col-12 mb-2">
+              {{therapy.GroupId | formatGroupId}} <b>{{therapy.DutyPercent}}</b>:<br>
+              {% if therapy.LeftHemisphere %}
+                Left
+                {% if therapy.LeftHemisphere.Mode != "Interleaving" %}
+                  {% for channel in therapy.LeftHemisphere.Channel %}
+                  {{channel | formatChannelName}}
+                  {% endfor %}
+                  PW {{therapy.LeftHemisphere.PulseWidth}} Freq {{therapy.LeftHemisphere.Frequency}} {{therapy.LeftHemisphere.Amplitude | precision:"1" }} {{therapy.LeftHemisphere.Unit}}
+                  {% if therapy.LeftHemisphere.AmplitudeThreshold %}
+                  (range: {{therapy.LeftHemisphere.AmplitudeThreshold.0 | precision:"1"}} - {{therapy.LeftHemisphere.AmplitudeThreshold.1 | precision:"1"}})
+                  {% endif %}
+                {% else %}
+                  {% for channel in therapy.LeftHemisphere.Channel.0 %}
+                  {{channel | formatChannelName}}
+                  {% endfor %}
+                  PW {{therapy.LeftHemisphere.PulseWidth.0}} Freq {{therapy.LeftHemisphere.Frequency.0}} {{therapy.LeftHemisphere.Amplitude.0 | precision:"1" }} {{therapy.LeftHemisphere.Unit.0}}
+                  {% if therapy.LeftHemisphere.AmplitudeThreshold %}
+                  (range: {{therapy.LeftHemisphere.AmplitudeThreshold.0 | precision:"1"}} - {{therapy.LeftHemisphere.AmplitudeThreshold.1 | precision:"1"}})
+                  {% endif %}
+                  <br>
+                  Left
+                  {% for channel in therapy.LeftHemisphere.Channel.1 %}
+                  {{channel | formatChannelName}}
+                  {% endfor %}
+                  PW {{therapy.LeftHemisphere.PulseWidth.1}} Freq {{therapy.LeftHemisphere.Frequency.1}} {{therapy.LeftHemisphere.Amplitude.1 | precision:"1" }} {{therapy.LeftHemisphere.Unit.1}}
+                  {% if therapy.LeftHemisphere.AmplitudeThreshold %}
+                  (range: {{therapy.LeftHemisphere.AmplitudeThreshold.0 | precision:"1"}} - {{therapy.LeftHemisphere.AmplitudeThreshold.1 | precision:"1"}})
+                  {% endif %}
+                {% endif %}
+                <br>
+              {% endif %}
+
+              {% if therapy.RightHemisphere %}
+                Right
+                {% if therapy.RightHemisphere.Mode != "Interleaving" %}
+                  {% for channel in therapy.RightHemisphere.Channel %}
+                  {{channel | formatChannelName}}
+                  {% endfor %}
+                  PW {{therapy.RightHemisphere.PulseWidth}} Freq {{therapy.RightHemisphere.Frequency}} {{therapy.RightHemisphere.Amplitude | precision:"1" }} {{therapy.RightHemisphere.Unit}}
+                  {% if therapy.RightHemisphere.AmplitudeThreshold %}
+                  (range: {{therapy.RightHemisphere.AmplitudeThreshold.0 | precision:"1"}} - {{therapy.RightHemisphere.AmplitudeThreshold.1 | precision:"1"}})
+                  {% endif %}
+                {% else %}
+                  {% for channel in therapy.RightHemisphere.Channel.0 %}
+                  {{channel | formatChannelName}}
+                  {% endfor %}
+                  PW {{therapy.RightHemisphere.PulseWidth.0}} Freq {{therapy.RightHemisphere.Frequency.0}} {{therapy.RightHemisphere.Amplitude.0 | precision:"1" }} {{therapy.RightHemisphere.Unit.0}}
+                  {% if therapy.RightHemisphere.AmplitudeThreshold %}
+                  (range: {{therapy.RightHemisphere.AmplitudeThreshold.0 | precision:"1"}} - {{therapy.RightHemisphere.AmplitudeThreshold.1 | precision:"1"}})
+                  {% endif %}
+                  <br>
+                  Right
+                  {% for channel in therapy.RightHemisphere.Channel.1 %}
+                  {{channel | formatChannelName}}
+                  {% endfor %}
+                  PW {{therapy.RightHemisphere.PulseWidth.1}} Freq {{therapy.RightHemisphere.Frequency.1}} {{therapy.RightHemisphere.Amplitude.1 | precision:"1" }} {{therapy.RightHemisphere.Unit.1}}
+                  {% if therapy.RightHemisphere.AmplitudeThreshold %}
+                  (range: {{therapy.RightHemisphere.AmplitudeThreshold.0 | precision:"1"}} - {{therapy.RightHemisphere.AmplitudeThreshold.1 | precision:"1"}})
+                  {% endif %}
+                {% endif %}
+                <br>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          <div class="col-6 mb-4">
+            <h5> New Groups </h5>
+            {% for therapy in SessionOverview.Therapy.StimulationGroups %}
+            <div class="col-12 mb-2">
+              {{therapy.GroupId | formatGroupId}}:<br>
+              {% if therapy.LeftHemisphere %}
+                Left
+                {% if therapy.LeftHemisphere.Mode != "Interleaving" %}
+                  {% for channel in therapy.LeftHemisphere.Channel %}
+                  {{channel | formatChannelName}}
+                  {% endfor %}
+                  PW {{therapy.LeftHemisphere.PulseWidth}} Freq {{therapy.LeftHemisphere.Frequency}} {{therapy.LeftHemisphere.Amplitude | precision:"1" }} {{therapy.LeftHemisphere.Unit}}
+                  {% if therapy.LeftHemisphere.AmplitudeThreshold %}
+                  (range: {{therapy.LeftHemisphere.AmplitudeThreshold.0 | precision:"1"}} - {{therapy.LeftHemisphere.AmplitudeThreshold.1 | precision:"1"}})
+                  {% endif %}
+                {% else %}
+                  {% for channel in therapy.LeftHemisphere.Channel.0 %}
+                  {{channel | formatChannelName}}
+                  {% endfor %}
+                  PW {{therapy.LeftHemisphere.PulseWidth.0}} Freq {{therapy.LeftHemisphere.Frequency.0}} {{therapy.LeftHemisphere.Amplitude.0 | precision:"1" }} {{therapy.LeftHemisphere.Unit.0}}
+                  {% if therapy.LeftHemisphere.AmplitudeThreshold %}
+                  (range: {{therapy.LeftHemisphere.AmplitudeThreshold.0 | precision:"1"}} - {{therapy.LeftHemisphere.AmplitudeThreshold.1 | precision:"1"}})
+                  {% endif %}
+                  <br>
+                  Left
+                  {% for channel in therapy.LeftHemisphere.Channel.1 %}
+                  {{channel | formatChannelName}}
+                  {% endfor %}
+                  PW {{therapy.LeftHemisphere.PulseWidth.1}} Freq {{therapy.LeftHemisphere.Frequency.1}} {{therapy.LeftHemisphere.Amplitude.1 | precision:"1" }} {{therapy.LeftHemisphere.Unit.1}}
+                  {% if therapy.LeftHemisphere.AmplitudeThreshold %}
+                  (range: {{therapy.LeftHemisphere.AmplitudeThreshold.0 | precision:"1"}} - {{therapy.LeftHemisphere.AmplitudeThreshold.1 | precision:"1"}})
+                  {% endif %}
+                {% endif %}
+                <br>
+              {% endif %}
+
+              {% if therapy.RightHemisphere %}
+                Right
+                {% if therapy.RightHemisphere.Mode != "Interleaving" %}
+                  {% for channel in therapy.RightHemisphere.Channel %}
+                  {{channel | formatChannelName}}
+                  {% endfor %}
+                  PW {{therapy.RightHemisphere.PulseWidth}} Freq {{therapy.RightHemisphere.Frequency}} {{therapy.RightHemisphere.Amplitude | precision:"1" }} {{therapy.RightHemisphere.Unit}}
+                  {% if therapy.RightHemisphere.AmplitudeThreshold %}
+                  (range: {{therapy.RightHemisphere.AmplitudeThreshold.0 | precision:"1"}} - {{therapy.RightHemisphere.AmplitudeThreshold.1 | precision:"1"}})
+                  {% endif %}
+                {% else %}
+                  {% for channel in therapy.RightHemisphere.Channel.0 %}
+                  {{channel | formatChannelName}}
+                  {% endfor %}
+                  PW {{therapy.RightHemisphere.PulseWidth.0}} Freq {{therapy.RightHemisphere.Frequency.0}} {{therapy.RightHemisphere.Amplitude.0 | precision:"1" }} {{therapy.RightHemisphere.Unit.0}}
+                  {% if therapy.RightHemisphere.AmplitudeThreshold %}
+                  (range: {{therapy.RightHemisphere.AmplitudeThreshold.0 | precision:"1"}} - {{therapy.RightHemisphere.AmplitudeThreshold.1 | precision:"1"}})
+                  {% endif %}
+                  <br>
+                  Right
+                  {% for channel in therapy.RightHemisphere.Channel.1 %}
+                  {{channel | formatChannelName}}
+                  {% endfor %}
+                  PW {{therapy.RightHemisphere.PulseWidth.1}} Freq {{therapy.RightHemisphere.Frequency.1}} {{therapy.RightHemisphere.Amplitude.1 | precision:"1" }} {{therapy.RightHemisphere.Unit.1}}
+                  {% if therapy.RightHemisphere.AmplitudeThreshold %}
+                  (range: {{therapy.RightHemisphere.AmplitudeThreshold.0 | precision:"1"}} - {{therapy.RightHemisphere.AmplitudeThreshold.1 | precision:"1"}})
+                  {% endif %}
+                {% endif %}
+                <br>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+$(document).ready(function() {
+  document.getElementById('sessionManagementNavbar').classList.add("active")
+})
+
+async function deleteSession(sessionID) {
+  let formData = new FormData();
+  formData.append("deleteSession", '{{PatientID}}');
+  formData.append("session_id", sessionID);
+  const response = await fetch(window.location.origin + "/report/sessionsManagement", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    $("#TableRow"+sessionID).remove()
+  }
+}
+
+async function viewSession(sessionID) {
+  let formData = new FormData();
+  formData.append("viewSession", '{{PatientID}}');
+  formData.append("session_id", sessionID);
+  const response = await fetch(window.location.origin + "/report/sessionsManagement", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    const data = await response.json()
+    //window.location.href = window.location.origin + "/report/sessionReport"
+  }
+}
+
+</script>
+
+{% endblock %}

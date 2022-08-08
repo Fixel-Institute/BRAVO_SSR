@@ -1,0 +1,101 @@
+{% extends 'dashboard_basic.html' %}
+{% load static %}
+
+{% block pageTitle %} BrainSense Survey - Percept Analysis Platform {% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+    <li class="breadcrumb-item text-sm">
+      <a class="text-white" href="javascript:;">
+        <i class="ni ni-app"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/patients">Patients</a></li>
+    <li class="breadcrumb-item text-sm text-white active" aria-current="page"><a class="opacity-5 text-white" href="/patientOverview">{{Patient.Name}}</a></li>
+  </ol>
+  <h6 class="font-weight-bolder mb-0 text-white">Custome Analysis Pipelines</h6>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row gx-4">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header pb-0">
+        <h6>Available Analysis Pipelines</h6>
+      </div>
+      <div class="card-body p-3">
+        <div class="timeline timeline-one-side" data-timeline-axis-style="dotted">
+          <div class="timeline-block mb-3">
+            <span class="timeline-step">
+              <i class="ni ni-bell-55 text-success text-gradient"></i>
+            </span>
+            <div class="timeline-content">
+              <a class="text-dark text-lg font-weight-bold mb-0" href="/pipeline/medicationschedule">Scheduled Medication Analysis</a>
+              <p class="text-sm mt-3 mb-2">
+                Analyze chronic LFP power based on a fixed medication schedule. Best for chronic LFP analysis without proper event markings.
+              </p>
+              <span class="badge badge-sm bg-gradient-danger">Chronic LFP</span>
+              <span class="badge badge-sm bg-gradient-danger">Therapy History</span>
+            </div>
+          </div>
+        </div>
+        <div class="timeline timeline-one-side" data-timeline-axis-style="dotted">
+          <div class="timeline-block mb-3">
+            <span class="timeline-step">
+              <i class="ni ni-bell-55 text-success text-gradient"></i>
+            </span>
+            <div class="timeline-content">
+              <a class="text-dark text-lg font-weight-bold mb-0" href="/pipeline/gaitcycle">Gait Cycle Analysis</a>
+              <p class="text-sm mt-3 mb-2">
+                Allow user to upload gait-related annotations for standard gait cycle analysis.
+              </p>
+              <span class="badge badge-sm bg-gradient-danger">Indefinite Streaming</span>
+            </div>
+          </div>
+        </div>
+        <div class="timeline timeline-one-side" data-timeline-axis-style="dotted">
+          <div class="timeline-block mb-3">
+            <span class="timeline-step">
+              <i class="ni ni-bell-55 text-success text-gradient"></i>
+            </span>
+            <div class="timeline-content">
+              <a class="text-dark text-lg font-weight-bold mb-0" href="/pipeline/eventpsd">Event PSD Additional Analysis</a>
+              <p class="text-sm mt-3 mb-2">
+                Additional analysis for the Event PSDs.
+              </p>
+              <span class="badge badge-sm bg-gradient-danger">Chronic LFP</span>
+            </div>
+          </div>
+        </div>
+        <div class="timeline timeline-one-side" data-timeline-axis-style="dotted">
+          <div class="timeline-block mb-3">
+            <span class="timeline-step">
+              <i class="ni ni-bell-55 text-success text-gradient"></i>
+            </span>
+            <div class="timeline-content">
+              <a class="text-dark text-lg font-weight-bold mb-0" href="/pipeline/adaptivestimulation">ADAPT Trial Analysis</a>
+              <p class="text-sm mt-3 mb-2">
+                Some analysis related to ADAPT Trial, but could be applied to other patients with Chronic LFP enabled with adjustable stimulation amplitude.
+              </p>
+              <span class="badge badge-sm bg-gradient-danger">Chronic LFP</span>
+              <span class="badge badge-sm bg-gradient-danger">Therapy History</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+
+$(document).ready(function() {
+  document.getElementById('analysesNavbar').classList.add("active")
+})
+</script>
+{% endblock %}

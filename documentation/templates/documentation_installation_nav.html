@@ -1,0 +1,62 @@
+{% extends 'documentation_basic.html' %}
+{% load static %}
+
+{% block content %}
+<div class="docs-wrapper">
+  <div id="docs-sidebar" class="docs-sidebar">
+    <div class="top-search-box d-lg-none p-3">
+      <form class="search-form">
+        <input type="text" placeholder="Search the docs..." name="search" class="form-control search-input">
+        <button type="submit" class="btn search-btn" value="Search"><i class="fas fa-search"></i></button>
+      </form>
+    </div>
+    <nav id="docs-nav" class="docs-nav navbar">
+	    <ul class="section-items list-unstyled nav flex-column pb-3">
+		    <li class="nav-item section-title">
+          <a class="nav-link scrollto" href="#section-introduction">
+            <span class="theme-icon-holder me-2"><i class="fa-solid fa-book"></i></span>
+            Overview
+          </a>
+        </li>
+		    <li class="nav-item section-title mt-3">
+          <a class="nav-link scrollto" href="#section-installation-linux">
+            <span class="theme-icon-holder me-2">
+              <i class="fa-solid fa-user-lock"></i>
+            </span>
+            Installation for Linux
+          </a>
+        </li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-linux-prereq">Prerequisite</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-linux-database">SQL Database</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-linux-procedure">Installation Procedure</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-linux-deploy">Deployment</a></li>
+		    <li class="nav-item section-title mt-3">
+          <a class="nav-link scrollto" href="#section-installation-windows">
+            <span class="theme-icon-holder me-2">
+              <i class="fa-solid fa-table"></i>
+            </span>
+            Installation for Windows
+          </a>
+        </li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-windows-prereq">Prerequisite</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-windows-database">SQL Database</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-windows-procedure">Installation Procedure</a></li>
+		    <li class="nav-item"><a class="nav-link scrollto" href="#section-windows-deploy">Deployment</a></li>
+	    </ul>
+    </nav>
+  </div>
+
+  <div class="docs-content">
+    <div class="container">
+      {% block article %}
+      {% endblock %}
+      <footer class="footer">
+        <div class="container text-center py-5">
+          <!--/* This template is free as long as you keep the footer attribution link. If you'd like to use the template without the attribution link, you can buy the commercial license via our website: themes.3rdwavemedia.com Thank you for your support. :) */-->
+          <small class="copyright">Designed with <span class="sr-only">love</span><i class="fas fa-heart" style="color: #fb866a;"></i> by <a class="theme-link" href="http://themes.3rdwavemedia.com" target="_blank">Xiaoying Riley</a> for developers</small>
+        </div>
+      </footer>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends 'dashboard_basic.html' %}
+{% load static %}
+
+{% block pageTitle %} Therapy History - Percept Analysis Platform {% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+    <li class="breadcrumb-item text-sm">
+      <a class="text-white" href="javascript:;">
+        <i class="ni ni-app"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/patients">Patients</a></li>
+    <li class="breadcrumb-item text-sm text-white active" aria-current="page"><a class="opacity-5 text-white" href="/patientOverview">{{Patient.Name}}</a></li>
+  </ol>
+  <h6 class="font-weight-bolder mb-0 text-white">BrainSense Surveys</h6>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div id="therapyAccordion" class="accordion mt-12">
+  </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+
+var accordionTemplate = `
+<h5 class="accordion-header" id="{TherapyDateID}">
+  <button class="accordion-button border-bottom font-weight-bold collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#{collapseID}" aria-expanded="false" aria-controls="collapseOne">
+    {TherapyDate}
+    <i class="collapse-close fa fa-plus text-xs pt-1 position-absolute end-0 me-3" aria-hidden="true"></i>
+    <i class="collapse-open fa fa-minus text-xs pt-1 position-absolute end-0 me-3" aria-hidden="true"></i>
+  </button>
+</h5>
+<div id="{collapseID}" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#therapyAccordion" style="">
+  <div class="accordion-body text-sm opacity-8">
+    {TherapyDetailTables}
+  </div>
+</div>`
+
+var therapyTableTemplate = `
+<div class="card mb-4">
+  <div class="card-header pb-0 p-3">
+    <div class="d-flex justify-content-between">
+      <h6 class="mb-2">{DeviceName}</h6>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table align-items-center ">
+      <tbody>
+        {AllRowContents}
+      </tbody>
+    </table>
+  </div>
+</div>`
+
+var therapyTableRowTemplate = `
+<tr id="{LOGID}">
+  <td class="w-20">
+    <div class="d-flex px-2 py-1 align-items-center">
+      <div class="ms-4">
+        <p class="text-xs font-weight-bold mb-0">Group ID:</p>
+        <h5 class="text-sm mb-0">
+          {GROUPNAME}
+        </h5>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div>
+      <p class="text-xs font-weight-bold mb-0">Frequency:</p>
+      {FREQUENCY}
+    </div>
+  </td>
+  <td>
+    <div>
+      <p class="text-xs font-weight-bold mb-0">Pulsewidth:</p>
+      {PULSEWIDTH}
+    </div>
+  </td>
+  <td>
+    <div>
+      <p class="text-xs font-weight-bold mb-0">Amplitude:</p>
+      {AMPLITUDE}
+    </div>
+  </td>
+  <td>
+    <div>
+      <p class="text-xs font-weight-bold mb-0">Active Contacts:</p>
+      {CONTACTS}
+    </div>
+  </td>
+  <td>
+    <div>
+      <p class="text-xs font-weight-bold mb-0">Brain Sense:</p>
+      {BRAINSENSE}
+    </div>
+  </td>
+  <td>
+    <div>
+      <button class="btn btn-sm bg-gradient-danger my-sm-auto mt-2 mb-0" type="button" onclick="removeTherapyHistory('{LOGID}')">Delete</button>
+    </div>
+  </td>
+</tr>`
+
+$(document).ready(function() {
+  document.getElementById('therapyHistoryNavbar').classList.add("active")
+
+  const True = true
+  const False = false
+  const data = {{TherapyConfigurations | safe}}
+
+  var therapyAccordion = document.getElementById("therapyAccordion")
+
+  var therapyDates = Object.keys(data)
+  for (var i = 0; i < therapyDates.length; i++)
+  {
+    var accordion = document.createElement("div")
+    accordion.classList.add(...["accordion-item","mb-3"])
+    var dateStruct = new Date(parseInt(therapyDates[i])*1000)
+    accordionContent = accordionTemplate.replaceAll("{TherapyDate}", "Before " + formatDateString(dateStruct, "{%B} {%D}, {%Y}"))
+    accordionContent = accordionContent.replaceAll("{collapseID}","Collapse" + formatDateString(dateStruct, "{%Y}_{%B}_{%D}"))
+    accordionContent = accordionContent.replaceAll("{TherapyDateID}",formatDateString(dateStruct,"{%B}{%D}_{%Y}"))
+
+    var allContents = {}
+    for (var j = 0; j < data[therapyDates[i]].length; j++)
+    {
+      if (!allContents.hasOwnProperty(data[therapyDates[i]][j]["Device"])) allContents[data[therapyDates[i]][j]["Device"]] = ""
+      allContents[data[therapyDates[i]][j]["Device"]] += formatRowContent(data[therapyDates[i]][j]["Overview"])
+    }
+
+    var tableInnerHTML = ""
+    var deviceIDs = Object.keys(allContents)
+    for (var j = 0; j < deviceIDs.length; j++)
+    {
+      tableInnerHTML += therapyTableTemplate.replaceAll("{AllRowContents}",allContents[deviceIDs[j]]).replaceAll("{DeviceName}",deviceIDs[j])
+    }
+    accordionContent = accordionContent.replaceAll("{TherapyDetailTables}",tableInnerHTML)
+
+    accordion.innerHTML = accordionContent
+    therapyAccordion.appendChild(accordion)
+  }
+
+})
+
+function formatRowContent(data)
+{
+  var content = therapyTableRowTemplate
+  content = content.replaceAll("{GROUPNAME}", data["GroupName"] + "<br><b>" + data["TherapyType"] + "</b>")
+  content = content.replaceAll("{FREQUENCY}", data["Frequency"])
+  content = content.replaceAll("{PULSEWIDTH}", data["PulseWidth"])
+  content = content.replaceAll("{AMPLITUDE}", data["Amplitude"])
+  content = content.replaceAll("{CONTACTS}", data["Contacts"])
+  content = content.replaceAll("{BRAINSENSE}", data["BrainSense"])
+  content = content.replaceAll("{LOGID}", data["TherapyLogID"])
+  return content
+}
+
+async function removeTherapyHistory(LogID)
+{
+  let formData = new FormData();
+  formData.append("removeTherapyLog", LogID);
+  const response = await fetch(window.location.origin + "/report/therapyHistory/resolveConflicts", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    document.getElementById(LogID).style.display = "none"
+  }
+}
+
+</script>
+{% endblock %}

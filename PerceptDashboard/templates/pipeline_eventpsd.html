@@ -1,0 +1,266 @@
+{% extends 'dashboard_basic.html' %}
+{% load static %}
+
+{% block pageTitle %} BrainSense Survey - Percept Analysis Platform {% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+    <li class="breadcrumb-item text-sm">
+      <a class="text-white" href="javascript:;">
+        <i class="ni ni-app"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/patients">Patients</a></li>
+    <li class="breadcrumb-item text-sm text-white active" aria-current="page"><a class="opacity-5 text-white" href="/patientOverview">{{Patient.Name}}</a></li>
+  </ol>
+  <h6 class="font-weight-bolder mb-0 text-white">Event PSD Analysis</h6>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row gx-4">
+  <div class="col-12">
+    <div class="card mb-4">
+      <div class="card-header pb-3">
+        <div class="h-100">
+          <h5>Select Time Range of Interest</h5>
+          <p class="text-sm">Only periods with BrainSense is shown.</p>
+        </div>
+      </div>
+      <div class="card-body tab-content pt-0">
+        <div class="row">
+          <div class="col-12 input-group">
+            <input id="datesSelection" class="form-control datepicker" placeholder="Please select date" type="text" onfocus="focused(this)" onfocusout="defocused(this);">
+            <button type="button" class="btn btn-sm btn-primary mb-0" onclick="updateCharts()">
+              Retrieve and Display
+            </button>
+          </div>
+          <div class = "col-lg-6 col-12">
+            <div id="EventPSDChart" class="chart">
+            </div>
+          </div>
+          <div class = "col-lg-6 col-12">
+            <div id="EventPowerChart" class="chart">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.plot.ly/plotly-2.8.3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.4.3/math.min.js"></script>
+<script>
+
+$(document).ready(function() {
+  document.getElementById('analysesNavbar').classList.add("active");
+  $(".datepicker").flatpickr({
+    mode: "range"
+  });
+})
+
+var eventData;
+var chronicData;
+async function updateCharts() {
+  var dateSelector = document.getElementById("datesSelection")
+  var dates = dateSelector.value.split(" to ")
+  if (dates.length == 2) {
+    var timezone = (new Date().getTimezoneOffset() / -60)
+    if (timezone < 0) {
+      var startTime = dates[0] + "T00:00:00-" + String(-timezone).padStart(2,"0") + ":00"
+      var endTime = dates[1] + "T00:00:00+" + String(-timezone).padStart(2,"0") + ":00"
+
+      let formData = new FormData();
+      formData.append("requestData", '{{PatientID}}');
+      formData.append("startTimestamp", startTime);
+      formData.append("endTimestamp", endTime);
+      const response = await fetch(window.location.origin + "/pipeline/eventpsd", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },});
+      if (response.status == 200)
+      {
+        var data = await response.json();
+        eventData = data["EventPSDs"];
+        chronicData = data["ChronicData"]
+        plotly_renderEventPSD()
+        plotly_renderEventPower()
+      }
+    }
+  }
+}
+
+async function plotly_renderEventPSD()
+{
+  for (var k = 0; k < 1; k++) {
+    for (var j = 0; j < eventData[k]["Render"].length; j++) {
+      var traces = []
+      var data = eventData[k]["Render"][j]
+
+      var frequencyArray = new Array(100)
+      for (var t = 0; t < frequencyArray.length; t++)  {
+        frequencyArray[t] = t*250/256
+      }
+
+      for (var i = 0; i < data["Events"].length; i++) {
+        var trace = {
+          x: frequencyArray,
+          y: data["Events"][i]["MeanPSD"],
+          mode: 'lines',
+          type: 'scatter',
+          line: {color: data["Events"][i]["EventColor"], width: 2},
+          hovertemplate: " " + data["Events"][i]["EventName"] + " %{y:.2f} <extra></extra>",
+          name: data["Events"][i]["EventName"] + " " + data["Events"][i]["Count"],
+          legendgroup: data["Events"][i]["EventName"],
+          showlegend: true
+        }
+        traces.push(trace)
+
+        var ydata = new Array(frequencyArray.length)
+        for (var t = 0; t < frequencyArray.length; t++) ydata[t] = data["Events"][i]["MeanPSD"][t]+data["Events"][i]["StdPSD"][t]
+        var trace = {
+          x: frequencyArray,
+          y: ydata,
+          fill: "none",
+          fillcolor: data["Events"][i]["EventColor"] + "44",
+          line: {color: "transparent"},
+          name: data["Events"][i]["EventName"],
+          legendgroup: data["Events"][i]["EventName"],
+          showlegend: false,
+          hoverinfo: "skip",
+          type: "scatter"
+        }
+        traces.push(trace)
+
+        var ydata = new Array(frequencyArray.length)
+        for (var t = 0; t < frequencyArray.length; t++) ydata[t] = data["Events"][i]["MeanPSD"][t]-data["Events"][i]["StdPSD"][t]
+        var trace = {
+          x: frequencyArray,
+          y: ydata,
+          fill: "tonexty",
+          fillcolor: data["Events"][i]["EventColor"] + "44",
+          line: {color: "transparent"},
+          name: data["Events"][i]["EventName"],
+          legendgroup: data["Events"][i]["EventName"],
+          showlegend: false,
+          hoverinfo: "skip",
+          type: "scatter"
+        }
+        traces.push(trace)
+      }
+
+      var layout = {
+        title: "Event PSDs",
+        xaxis: {
+          showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+          range: [0, 100],
+          ticks: "outside", title: {text: "Frequency (Hz)", font: {size: 15}},
+        },
+        yaxis: {
+          type: "log",
+          showgrid: true,
+          gridcolor: "#DDDDDD",
+          showline: true,
+          linecolor: "#000000",
+          ticks: "outside",
+          range: [-1.1,0.8],
+          zeroline: false,
+          title: {text: "Power (a.u.)", font: {size: 15}},
+          tickfont_size: 12,
+          tickmode: "array",
+          tickvals: [0.001,0.01,0.1,1,10],
+          color: "#000000",
+        },
+        legend: {
+          yanchor: "top", y: 0.99, xanchor: "left", x:0.7
+        },
+        hovermode: "x"
+      }
+
+      document.getElementById("EventPSDChart").style.height = String(500) + "px"
+      Plotly.newPlot('EventPSDChart', traces, layout)
+    }
+  }
+}
+
+async function plotly_renderEventPower()
+{
+  for (var k = 0; k < 1; k++) {
+    var traces = []
+    var data = chronicData[k]["EventLockedPower"]
+    for (var i = 0; i < data["PowerChart"].length; i++) {
+      var trace = {
+        x: data["TimeArray"],
+        y: data["PowerChart"][i]["Line"],
+        mode: 'lines',
+        type: 'scatter',
+        line: {color: data["PowerChart"][i]["EventColor"], width: 2},
+        hovertemplate: "%{y:.2f} <extra></extra>",
+        hovertemplate: "  %{x} min: %{y:.2f} <extra></extra>",
+        name: data["PowerChart"][i]["EventName"],
+        legendgroup: data["PowerChart"][i]["EventName"],
+        showlegend: true
+      }
+      traces.push(trace)
+
+      var ydata = new Array(data["TimeArray"].length)
+      for (var t = 0; t < data["TimeArray"].length; t++) ydata[t] = data["PowerChart"][i]["Line"][t]+data["PowerChart"][i]["Shade"][t]
+      var trace = {
+        x: data["TimeArray"],
+        y: ydata,
+        fill: "none",
+        fillcolor: data["PowerChart"][i]["EventColor"] + "44",
+        line: {color: "transparent"},
+        name: data["PowerChart"][i]["EventName"],
+        legendgroup: data["PowerChart"][i]["EventName"],
+        showlegend: false,
+        hoverinfo: "skip",
+        type: "scatter"
+      }
+      traces.push(trace)
+
+      var ydata = new Array(data["TimeArray"].length)
+      for (var t = 0; t < data["TimeArray"].length; t++) ydata[t] = data["PowerChart"][i]["Line"][t]-data["PowerChart"][i]["Shade"][t]
+      var trace = {
+        x: data["TimeArray"],
+        y: ydata,
+        fill: "tonexty",
+        fillcolor: data["PowerChart"][i]["EventColor"] + "44",
+        line: {color: "transparent"},
+        name: data["PowerChart"][i]["EventName"],
+        legendgroup: data["PowerChart"][i]["EventName"],
+        showlegend: false,
+        hoverinfo: "skip",
+        type: "scatter"
+      }
+      traces.push(trace)
+    }
+    
+    var layout = {
+      title: "Event Locked Power",
+      xaxis: {
+        showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+        range: [data["TimeArray"][0], data["TimeArray"][data["TimeArray"].length-1]],
+        ticks: "outside", title: {text: "Time (minutes)", font: {size: 15}},
+      },
+      yaxis: {
+        showgrid: true, gridcolor: "#DDDDDD", showline: true, linecolor: "#000000",
+        ticks: "outside", range: [data["PowerRange"][0],data["PowerRange"][1]], zeroline: false,
+        title: {text: "Amplitude (a.u.)", font: {size: 15}},
+        color: "#000000",
+      },
+      legend: {
+        yanchor: "top", y: 0.99, xanchor: "left", x:0.7
+      }
+    }
+
+    document.getElementById("EventPowerChart").style.height = String(500) + "px"
+    Plotly.newPlot('EventPowerChart', traces, layout)
+  }
+}
+
+</script>
+{% endblock %}

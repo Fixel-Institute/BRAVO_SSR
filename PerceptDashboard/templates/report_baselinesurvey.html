@@ -1,0 +1,365 @@
+{% extends 'dashboard_basic.html' %}
+{% load static %}
+
+{% block pageTitle %} BrainSense Survey - Percept Analysis Platform {% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
+    <li class="breadcrumb-item text-sm">
+      <a class="text-white" href="javascript:;">
+        <i class="ni ni-app"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/patients">Patients</a></li>
+    <li class="breadcrumb-item text-sm text-white active" aria-current="page"><a class="opacity-5 text-white" href="/patientOverview">{{Patient.Name}}</a></li>
+  </ol>
+  <h6 class="font-weight-bolder mb-0 text-white">BrainSense Surveys</h6>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-sm-6 mb-4">
+    <label class="form-label">Choose BrainSense Survey Date</label>
+    <select class="form-control" name="BrainSenseSurveySelection" id="BrainSenseSurveySelection" onchange="selectDisplay()">
+    </select>
+  </div>
+  <div class="col-sm-6 mb-4">
+  </div>
+  <div class="col-lg-6 col-12 mb-4">
+    <div id="LeftPSDCard" class="card z-index-0 h-100">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <h6 class="text-capitalize">BrainSense Survey (Left Hemisphere)</h6>
+        <div id="progressSpinerLeft" class="container">
+          <div class="row justify-content-center">
+            <div class="spinner-border text-default" role="status">
+              <span class="sr-only">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="SurveyLeftPSDChart" class="chart" style="height:500px;">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6 col-12 mb-4">
+    <div id="RightPSDCard" class="card z-index-0 h-100">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <h6 class="text-capitalize">BrainSense Survey (Right Hemisphere)</h6>
+        <div id="progressSpinerRight" class="container">
+          <div class="row justify-content-center">
+            <div class="spinner-border text-default" role="status">
+              <span class="sr-only">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="SurveyRightPSDChart" class="chart" style="height:500px;">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6 col-12 mb-4">
+    <div id="LeftChronicPSDCard" class="card z-index-0 h-100">
+      <div class="card-header pb-0 pt-3 bg-transparent">
+        <div class="row">
+          <div class="col-6 d-flex align-items-center">
+            <h6 class="text-capitalize">Survey PSDs Changes Over Time</h6>
+          </div>
+          <div class="col-6 text-end">
+            <div class="dropdown">
+              <button class="btn bg-gradient-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Select Group
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" id="LeftChronicPSDSelector" style="max-height: 300px; overflow: auto;">
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-3">
+        <div id="LeftChronicPSDChart" class="chart" style="height:500px;">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.plot.ly/plotly-2.8.3.min.js"></script>
+<script src="{% static 'js/plugins/choices.min.js' %}"></script>
+<script>
+
+$(document).ready(function() {
+  document.getElementById('brainsenseSurveyNavbar').classList.add("active")
+  requestBrainSenseData()
+})
+
+var surveyData;
+async function requestBrainSenseData()
+{
+  let formData = new FormData();
+  formData.append("requestData", '{{PatientID}}');
+  const response = await fetch(window.location.origin + "/report/brainsenseSurvey", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
+  if (response.status == 200)
+  {
+    surveyData = await response.json()
+
+    var selectList = document.getElementById('BrainSenseSurveySelection')
+    if (surveyData.length > 0)
+    {
+      var surveySelectionList = []
+      for (var i = 0; i < surveyData.length; i++) {
+        var timestruct = new Date(surveyData[i]["Timestamp"]*1000)
+
+        var timestampFound = false
+        for (element of surveySelectionList)
+        {
+          if (element-60 < surveyData[i]["Timestamp"] && element >= surveyData[i]["Timestamp"])
+          {
+            timestampFound = true
+            break
+          }
+        }
+        if (!timestampFound)
+        {
+          var option = document.createElement("option");
+          option.value = surveyData[i]["Timestamp"];
+          option.text = surveyData[i]["DeviceName"] + " " + formatDateString(timestruct, "{%B} {%D}, {%Y} - {%H}:{%M} {%P}");
+          selectList.appendChild(option);
+          surveySelectionList.push(surveyData[i]["Timestamp"])
+        }
+      }
+
+      updateBaselinePSDs(surveyData, surveyData[0]["Timestamp"])
+      populateSurveyContactSelector(surveyData)
+      $('#progressSpinerLeft').hide()
+      $('#progressSpinerRight').hide()
+    }
+    else
+    {
+      document.getElementById("LeftPSDCard").style.display = "none"
+      document.getElementById("RightPSDCard").style.display = "none"
+      document.getElementById("LeftChronicPSDCard").style.display = "none"
+    }
+    const surveySelector = new Choices(selectList, {
+      shouldSort: false
+    });
+  }
+}
+
+function selectDisplay()
+{
+  var selectList = document.getElementById('BrainSenseSurveySelection')
+  updateBaselinePSDs(surveyData, parseInt(selectList.value))
+}
+
+function updateBaselinePSDs(data, timestamp)
+{
+  plotly_baselinePSD(data, timestamp, "Left")
+  plotly_baselinePSD(data, timestamp, "Right")
+}
+
+async function populateSurveyContactSelector(data)
+{
+  var linkTemplate = `<a class="dropdown-item border-radius-md" href="javascript:plotly_renderSurveyChronicPower('{DEVICEID}','{HEMISPHERENAME}','{GROUPNAME}');">{DEVICEID} {HEMISPHERENAME} {GROUPNAME}</a>`
+
+  selector = document.getElementById("LeftChronicPSDSelector")
+  var selectorList = []
+
+  for (var i = 0; i < data.length; i++) {
+    var timestruct = new Date(data[i]["Timestamp"]*1000)
+    var groupName = "E{0}-E{1}".format(data[i]["Channel"][0],data[i]["Channel"][1])
+
+    if (!selectorList.includes(data[i]["DeviceName"] + data[i]["Hemisphere"] + groupName)) {
+      selectorList.push(data[i]["DeviceName"] + data[i]["Hemisphere"] + groupName)
+      var element = document.createElement("li")
+      element.innerHTML = linkTemplate.replaceAll("{GROUPNAME}",groupName).replaceAll("{HEMISPHERENAME}", data[i]["Hemisphere"]).replaceAll("{DEVICEID}", data[i]["DeviceName"])
+      selector.appendChild(element)
+    }
+  }
+
+  if (selector.children.length > 0) {
+    document.getElementById("LeftChronicPSDCard").style.display = ""
+    plotly_renderSurveyChronicPower(data[0]["DeviceName"], data[0]["Hemisphere"], "E{0}-E{1}".format(data[0]["Channel"][0],data[0]["Channel"][1]))
+  }
+}
+
+function plotly_baselinePSD(data, timestamp, hemisphere)
+{
+  var traces = []
+  for (var i = 0; i < data.length; i++)
+  {
+    if ((data[i]["Timestamp"] > timestamp-60 && data[i]["Timestamp"] <= timestamp) && data[i]["Hemisphere"].startsWith(hemisphere))
+    {
+      var timestruct = new Date(data[i]["Timestamp"]*1000)
+      var titleHemisphere = data[i]["Hemisphere"]
+      var colorText = "rgb(0,0,0)"
+      var legendGroupName = "E{0}-E{1}".format(data[i]["Channel"][0],data[i]["Channel"][1])
+      if (matchArray(data[i]["Channel"],[0,1])) colorText = "rgb(252,44,3)"
+      else if (matchArray(data[i]["Channel"],[0,2])) colorText = "rgb(252,161,3)"
+      else if (matchArray(data[i]["Channel"],[0,3])) colorTewaxt = "rgb(100,100,100)"
+      else if (matchArray(data[i]["Channel"],[1,2])) colorText = "rgb(3,252,53)"
+      else if (matchArray(data[i]["Channel"],[1,3])) colorText = "rgb(3,252,186)"
+      else if (matchArray(data[i]["Channel"],[2,3])) colorText = "rgb(3,132,252)"
+
+      else if (matchArray(data[i]["Channel"],[1.1,2.1])) {
+        colorText = "rgb(255,0,0)"
+        legendGroupName = "Segmented Side 01"
+      } else if (matchArray(data[i]["Channel"],[1.2,2.2])) {
+        colorText = "rgb(0,255,0)"
+        legendGroupName = "Segmented Side 01"
+      } else if (matchArray(data[i]["Channel"],[1.3,2.3])) {
+        colorText = "rgb(0,0,255)"
+        legendGroupName = "Segmented Side 01"
+      }
+
+      else if (matchArray(data[i]["Channel"],[1.1,1.2])) {
+        colorText = "rgb(128,128,0)"
+        legendGroupName = "Segmented Ring 01"
+      } else if (matchArray(data[i]["Channel"],[1.1,1.3])) {
+        colorText = "rgb(128,0,128)"
+        legendGroupName = "Segmented Ring 01"
+      } else if (matchArray(data[i]["Channel"],[1.2,1.3])) {
+        colorText = "rgb(0,128,128)"
+        legendGroupName = "Segmented Ring 01"
+      }
+
+      else if (matchArray(data[i]["Channel"],[2.1,2.2])) {
+        colorText = "rgb(228,228,0)"
+        legendGroupName = "Segmented Ring 02"
+      } else if (matchArray(data[i]["Channel"],[2.1,2.3])) {
+        colorText = "rgb(228,0,228)"
+        legendGroupName = "Segmented Ring 02"
+      } else if (matchArray(data[i]["Channel"],[2.2,2.3])) {
+        colorText = "rgb(0,228,228)"
+        legendGroupName = "Segmented Ring 02"
+      }
+
+      var trace = {
+        x: data[i]["Frequency"],
+        y: data[i]["MeanPower"],
+        type: 'scatter',
+        mode: "lines",
+        name: formatSegmentString(data[i]["Channel"]),
+        line: {color: colorText, width: 2},
+        legendgroup: legendGroupName,
+        hovertemplate: "E{0}-E{1}".format(data[i]["Channel"][0],data[i]["Channel"][1]) + "  %{y:.2f} μV<sup>2</sup>/Hz <extra></extra>",
+        showlegend: true
+      }
+      traces.push(trace)
+    }
+  }
+
+  if (traces.length == 0)
+  {
+    if (document.getElementById(hemisphere+"PSDCard").style.display != "none") document.getElementById(hemisphere+"PSDCard").style.display = "none"
+    return
+  }
+  else
+  {
+    if (document.getElementById(hemisphere+"PSDCard").style.display == "none") document.getElementById(hemisphere+"PSDCard").style.display = ""
+  }
+
+  var layout = {
+    title: {
+      text: titleHemisphere + " " + formatDateString(timestruct, " {%B} {%D}, {%Y} - {%H}:{%M} {%P}")
+    },
+    yaxis: {
+      type: "log",
+      showgrid: true,
+      gridcolor: "#DDDDDD",
+      showline: true,
+      linecolor: "#000000",
+      ticks: "outside",
+      range: [-3,1.5],
+      zeroline: false,
+      title: {text: "Power (μV<sup>2</sup>/Hz)", font: {size: 15}},
+      tickfont_size: 12,
+      tickmode: "array",
+      tickvals: [0.001,0.01,0.1,1,10],
+      color: "#000000",
+    },
+    xaxis: {
+      showgrid: true,
+      showline: true,
+      ticks: "outside",
+      range: [0,100],
+      showticklabels: true,
+      zeroline: false,
+      title: {text: "Frequency (Hz)", font: {size: 15}},
+    },
+    hovermode: "x"
+  };
+
+  Plotly.newPlot('Survey'+hemisphere+'PSDChart', traces, layout)
+}
+
+function plotly_renderSurveyChronicPower(device, hemisphere, channel)
+{
+  var data = surveyData;
+  var traces = []
+  for (var i = 0; i < data.length; i++)
+  {
+    if (data[i]["DeviceName"]==device && data[i]["Hemisphere"]==hemisphere && "E{0}-E{1}".format(data[i]["Channel"][0],data[i]["Channel"][1]) == channel) {
+      var timestruct = new Date(data[i]["Timestamp"]*1000)
+      var trace = {
+        x: data[i]["Frequency"],
+        y: data[i]["MeanPower"],
+        type: 'scatter',
+        mode: "lines",
+        name: formatDateString(timestruct, "{%B} {%D}, {%Y} - {%H}:{%M} {%P}"),
+        line: {width: 2},
+        hovertemplate: "  %{y:.2f} μV<sup>2</sup>/Hz <extra></extra>",
+        showlegend: true
+      }
+      traces.push(trace)
+    }
+  }
+
+  for (let i in traces) {
+    traces[i]["line"]["color"] = getColorString(traces.length-1-i,0,traces.length-1)
+  }
+
+  var layout = {
+    title: {
+      text: device + " " + hemisphere + " " + channel
+    },
+    yaxis: {
+      type: "log",
+      showgrid: true,
+      gridcolor: "#DDDDDD",
+      showline: true,
+      linecolor: "#000000",
+      ticks: "outside",
+      range: [-3,1.5],
+      zeroline: false,
+      title: {text: "Power (μV<sup>2</sup>/Hz)", font: {size: 15}},
+      tickfont_size: 12,
+      tickmode: "array",
+      tickvals: [0.001,0.01,0.1,1,10],
+      color: "#000000",
+    },
+    xaxis: {
+      showgrid: true,
+      showline: true,
+      ticks: "outside",
+      range: [0,100],
+      showticklabels: true,
+      zeroline: false,
+      title: {text: "Frequency (Hz)", font: {size: 15}},
+    },
+    hovermode: "x"
+  };
+
+  Plotly.newPlot("LeftChronicPSDChart", traces, layout)
+}
+
+</script>
+{% endblock %}

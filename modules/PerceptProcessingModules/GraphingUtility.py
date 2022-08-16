@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Some common utility functions for plotting data
-
-@author: Jackson Cagle
+@author: Jackson Cagle, University of Florida
+@email: jackson.cagle@neurology.ufl.edu
+@date: Fri Oct 17 2020
 """
 
 from matplotlib import pyplot as plt

@@ -4,6 +4,7 @@ from django.utils import timezone
 import uuid
 import json
 import datetime
+from cryptography.fernet import Fernet
 
 def PerceptRecordingDefaultAuthorization():
     nullDateTime = 0
@@ -72,6 +73,7 @@ class Patient(models.Model):
     medical_record_number = models.CharField(default="", max_length=255)
 
     research_study_id = models.JSONField(default=list, null=True)
+    patient_identifier_hashfield = models.CharField(default="", max_length=255)
 
     birth_date = models.DateTimeField(default=timezone.now)
     device_deidentified_id = models.JSONField(default=list, null=True)
@@ -81,13 +83,17 @@ class Patient(models.Model):
     def __str__(self):
         return str(self.deidentified_id)
 
-    def getResearchId(self):
-        return self.research_study_id
+    def getPatientFirstName(self, key):
+        secureEncoder = Fernet(key)
+        return secureEncoder.decrypt(self.first_name.encode("utf-8")).decode("utf-8")
 
-    def addResearchId(self, researchId):
-        if not deviceID in self.research_study_id:
-            self.research_study_id.append(researchId)
-            self.save()
+    def getPatientLastName(self, key):
+        secureEncoder = Fernet(key)
+        return secureEncoder.decrypt(self.last_name.encode("utf-8")).decode("utf-8")
+
+    def getPatientMRN(self, key):
+        secureEncoder = Fernet(key)
+        return secureEncoder.decrypt(self.medical_record_number.encode("utf-8")).decode("utf-8")
 
     def addDevice(self, deviceID):
         if not deviceID in self.device_deidentified_id:
@@ -119,13 +125,15 @@ class ResearchAuthorizedAccess(models.Model):
         return str(self.authorized_patient_id) + " is accessible by " + str(self.researcher_id)
 
 class PerceptDevice(models.Model):
-    serial_number = models.CharField(default="", max_length=32)
+    serial_number = models.CharField(default="", max_length=512)
     device_name = models.CharField(default="", max_length=32)
     device_type = models.CharField(default="Percept PC", max_length=32)
     deidentified_id = models.UUIDField(default=uuid.uuid4, editable=False)
     patient_deidentified_id = models.UUIDField(default=uuid.uuid4)
     implant_date = models.DateTimeField(default=timezone.now)
 
+    device_identifier_hashfield = models.CharField(default="", max_length=255)
+    
     device_location = models.CharField(default="", max_length=32)
     device_lead_configurations = models.JSONField(default=list, null=True)
     device_last_seen = models.DateTimeField(default=timezone.now)
@@ -136,6 +144,15 @@ class PerceptDevice(models.Model):
 
     def __str__(self):
         return str(self.deidentified_id)
+
+    def getDeviceSerialNumber(self, key):
+        try:
+            secureEncoder = Fernet(key)
+            serialNumber = secureEncoder.decrypt(self.serial_number.encode("utf-8")).decode("utf-8")
+        except Exception as e:
+            serialNumber = str(self.deidentified_id)
+        
+        return serialNumber
 
 class PerceptSession(models.Model):
     deidentified_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)

@@ -83,7 +83,7 @@
             </div>
           </div>
           <div class="col-4 text-end">
-            <input type="file" id="singleFileInput" onchange="requestPUTFile(this)" style="display: None"/>
+            <input type="file" id="singleFileInput" onchange="requestPUTFile(this, true)" style="display: None"/>
             <a href="javascript:void(0)" onclick="uploadSingleSession()">
               <div class="icon icon-shape bg-gradient-primary shadow text-center border-radius-md">
                 <i class="fa fa-cloud-upload-alt" text-lg opacity-10" aria-hidden="true"></i>
@@ -262,7 +262,7 @@ function uploadSingleSession()
   return 0;
 }
 
-async function requestPUTFile(el)
+async function requestPUTFile(el, SessionView)
 {
   var currentFileProgress = 0
   var maxFiles = 0
@@ -277,9 +277,10 @@ async function requestPUTFile(el)
     currentProgress = i / files.length * 100
     let formData = new FormData();
     formData.append("file", files[i]);
-    if (maxFiles == 1) {
+    if (SessionView) {
       formData.append("SessionView", "true")
     }
+    console.log(formData)
 
     const response = await fetch(window.location.origin + "/patients/upload", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
     if (response.status == 200)
@@ -292,7 +293,7 @@ async function requestPUTFile(el)
         addNewTableRow(data["newPatient"])
       }
 
-      if (maxFiles == 1) {
+      if (SessionView) {
         window.location.href = window.location.origin + "/report/sessionReport"
       }
     }

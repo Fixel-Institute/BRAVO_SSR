@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Some common utility functions for doing Time-Frequency Analysis and other 
-signal processing in Python
-
-@author: Jackson Cagle
+@author: Jackson Cagle, University of Florida
+@email: jackson.cagle@neurology.ufl.edu
+@date: Fri Oct 17 2020
 """
 
 from spectrum import pyule

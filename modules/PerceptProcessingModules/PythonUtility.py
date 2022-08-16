@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Oct 16 11:06:37 2020
-
-@author: Jackson Cagle
+@author: Jackson Cagle, University of Florida
+@email: jackson.cagle@neurology.ufl.edu
+@date: Fri Oct 16 11:06:37 2020
 """
 
 import numpy as np

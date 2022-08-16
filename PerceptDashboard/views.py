@@ -196,7 +196,7 @@ class PatientSessionReport(RestViews.APIView):
         if not "SessionJsonId" in request.session and not "SessionOverview" in request.session:
             return redirect("patients")
 
-        if request.session["patient_deidentified_id"] == "TemporarySession":
+        if request.session["patient_deidentified_id"] == "TemporarySession" or request.user.is_clinician:
             context = dict()
             context["User"] = database.extractUserInfo(request.user)
             context["PageView"] = {"ExpandProcessed": True}
@@ -209,9 +209,9 @@ class PatientSessionReport(RestViews.APIView):
         else:
             Authority = {}
             Authority["Level"] = database.verifyAccess(request.user, request.session["patient_deidentified_id"])
-            if Authority["Level"] == 0 or not request.session["SessionJsonId"]:
+            if Authority["Level"] == 0:
                 return redirect("patients")
-
+            
             context = dict()
             context["User"] = database.extractUserInfo(request.user)
             context["PageView"] = {"ExpandProcessed": True}
@@ -1119,41 +1119,154 @@ class RequestAPIEndpoints(RestViews.APIView):
             data = database.extractPatientList(request.user)
             return Response(status=200, data=data)
 
+        elif request.data["RequestType"] == "requestPatientInfo":
+            data = database.extractPatientInfo(request.user, request.data["PatientID"])
+            return Response(status=200, data=data)
+
         elif request.data["RequestType"] == "queryImpedanceMeasurement":
             data = database.queryImpedanceMeasurement(request.user, request.data["PatientID"])
             return Response(status=200, data=data)
 
         elif request.data["RequestType"] == "queryBrainSenseSurveys":
-            data = database.querySurveyResults(request.user, request.data["PatientID"])
-            return Response(status=200, data=data)
+            Authority = {}
+            Authority["Level"] = database.verifyAccess(request.user, request.data["PatientID"])
+            if Authority["Level"] == 0:
+                return Response(status=403)
+            if Authority["Level"] == 1:
+                Authority["Permission"] = database.verifyPermission(request.user, request.data["PatientID"], Authority, "BrainSenseSurvey")
+                data = database.querySurveyResults(request.user, request.data["PatientID"], Authority)
+                return Response(status=200, data=data)
+            elif Authority["Level"] == 2:
+                PatientInfo = database.extractAccess(request.user, request.data["PatientID"])
+                Authority["Permission"] = database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseSurvey")
+                data = database.querySurveyResults(request.user, PatientInfo.authorized_patient_id, Authority)
+                return Response(status=200, data=data)
+            return Response(status=403)
 
         elif request.data["RequestType"] == "queryBrainSenseStreams":
-            data = database.queryRealtimeStreamOverview(request.user, request.data["PatientID"])
-            return Response(status=200, data=data)
+            Authority = {}
+            Authority["Level"] = database.verifyAccess(request.user, request.data["PatientID"])
+            if Authority["Level"] == 1:
+                Authority["Permission"] = database.verifyPermission(request.user, request.data["PatientID"], Authority, "BrainSenseStream")
+                data = database.queryRealtimeStreamOverview(request.user, request.data["PatientID"], Authority)
+                return Response(status=200, data=data)
+            elif Authority["Level"] == 2:
+                PatientInfo = database.extractAccess(request.user, request.data["PatientID"])
+                Authority["Permission"] = database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
+                data = database.queryRealtimeStreamOverview(request.user, PatientInfo.authorized_patient_id, Authority)
+                return Response(status=200, data=data)
+            return Response(status=403)
 
         elif request.data["RequestType"] == "retrieveTherapyConfigurations" and "RequestData" in request.data:
-            data = database.queryTherapyConfigurations(request.user, request.data["RequestData"])
+            Authority = {}
+            Authority["Level"] = database.verifyAccess(request.user, request.data["RequestData"])
+            if Authority["Level"] == 0:
+                return Response(status=403, data=data)
+            if Authority["Level"] == 1:
+                Authority["Permission"] = database.verifyPermission(request.user, request.data["RequestData"], Authority, "TherapyHistory")
+                data["TherapyChangeLogs"] = database.queryTherapyHistory(request.user, request.data["RequestData"], Authority)
+                TherapyConfigurations = database.queryTherapyConfigurations(request.user, request.data["RequestData"], Authority)
+                data["TherapyConfigurations"] = database.processTherapyDetails(TherapyConfigurations, TherapyChangeLog=data["TherapyChangeLogs"])
+            elif Authority["Level"] == 2:
+                PatientInfo = database.extractAccess(request.user, request.data["RequestData"])
+                Authority["Permission"] = database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "TherapyHistory")
+                data["TherapyChangeLogs"] = database.queryTherapyHistory(request.user, PatientInfo.authorized_patient_id, Authority)
+                TherapyConfigurations = database.queryTherapyConfigurations(request.user, PatientInfo.authorized_patient_id, Authority)
+                data["TherapyConfigurations"] = database.processTherapyDetails(TherapyConfigurations, TherapyChangeLog=data["TherapyChangeLogs"])
             return Response(status=200, data=data)
 
         elif request.data["RequestType"] == "retrieveChronicLFPs" and "RequestData" in request.data:
-            TherapyHistory = database.queryTherapyHistory(request.user, request.data["RequestData"], {"Level": 1})
-            data = database.queryChronicLFPs(request.user, request.data["RequestData"], TherapyHistory)
-            #data, _ = database.processChronicLFPs(data)
+            Authority = {}
+            Authority["Level"] = database.verifyAccess(request.user, request.data["RequestData"])
+            if Authority["Level"] == 0:
+                return Response(status=404)
+            elif Authority["Level"] == 1:
+                Authority["Permission"] = database.verifyPermission(request.user, request.data["RequestData"], Authority, "ChronicLFPs")
+                PatientID = request.data["RequestData"]
+            elif Authority["Level"] == 2:
+                PatientInfo = database.extractAccess(request.user, request.data["RequestData"])
+                deidentification = database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id)
+                Authority["Permission"] = database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "ChronicLFPs")
+                PatientID = PatientInfo.authorized_patient_id
+            TherapyHistory = database.queryTherapyHistory(request.user, PatientID, Authority)
+            data = database.queryChronicLFPs(request.user, PatientID, TherapyHistory, Authority)
             return Response(status=200, data=data)
 
         elif request.data["RequestType"] == "retrieveRealtimeStream" and "RequestData" in request.data:
-            BrainSenseData, _ = database.queryRealtimeStreamData(request.user, request.data["RequestData"], int(request.data["RequestTimestamp"]), refresh=False)
-            if BrainSenseData == None:
-                return Response(status=400)
-            BrainSenseData["Stimulation"] = database.processRealtimeStreamStimulationAmplitude(BrainSenseData)
-            return Response(status=200, data=BrainSenseData)
+            Authority = {}
+            Authority["Level"] = database.verifyAccess(request.user, request.data["RequestData"])
+            if Authority["Level"] == 0:
+                return Response(status=403)
 
-        elif request.data["RequestType"] == "retrieveIndefiniteStream" and "RequestData" in request.data:
-            data = database.queryMontageData(request.user, [request.data["RequestData"]], [int(request.data["RequestTimestamp"])])
+            if Authority["Level"] == 1:
+                Authority["Permission"] = database.verifyPermission(request.user, request.data["RequestData"], Authority, "BrainSenseStream")
+                BrainSenseData, _ = database.queryRealtimeStreamData(request.user, request.data["RequestData"], int(request.data["requestTimestamp"]), Authority, refresh=False)
+                if BrainSenseData == None:
+                    return Response(status=400)
+                data = database.processRealtimeStreamRenderingData(BrainSenseData, request.session["ProcessingSettings"]["RealtimeStream"])
+                return Response(status=200, data=data)
+
+            elif Authority["Level"] == 2:
+                PatientInfo = database.extractAccess(request.user, request.data["RequestData"])
+                deidentification = database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id)
+                DeviceIDs = [deidentification["Devices"][i]["ID"] for i in range(len(deidentification["Devices"]))]
+                if not request.data["requestData"] in DeviceIDs:
+                    return Response(status=403)
+                Authority["Permission"] = database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
+                BrainSenseData, _ = database.queryRealtimeStreamData(request.user, request.data["RequestData"], int(request.data["RequestTimestamp"]), Authority, refresh=False)
+                if BrainSenseData == None:
+                    return Response(status=400)
+                data = database.processRealtimeStreamRenderingData(BrainSenseData, request.session["ProcessingSettings"]["RealtimeStream"])
+                return Response(status=200, data=data)
+
+            return Response(status=403)
+
+        elif request.data["RequestType"] == "retrieveIndefiniteStream" and "DeviceID" in request.data and "RequestData" in request.data:
+            Authority = {}
+            Authority["Level"] = database.verifyAccess(request.user, request.data["RequestData"])
+            if Authority["Level"] == 0:
+                return Response(status=404)
+
+            PatientID = request.session["patient_deidentified_id"]
+            if Authority["Level"] == 2:
+                PatientInfo = database.extractAccess(request.user, request.data["RequestData"])
+                deidentification = database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id)
+                DeviceIDs = [deidentification["Devices"][i]["ID"] for i in range(len(deidentification["Devices"]))]
+                if not request.data["DeviceID"] in DeviceIDs:
+                    return Response(status=403)
+                PatientID = PatientInfo.authorized_patient_id
+
+            Authority["Permission"] = database.verifyPermission(request.user, PatientID, Authority, "IndefiniteStream")
+            data = database.queryMontageData(request.user, [request.data["DeviceID"]], [int(request.data["RequestTimestamp"])], Authority)
             return Response(status=200, data=data)
 
         elif request.data["RequestType"] == "retrieveRealtimeStreamStimulationEpochs" and "RequestData" in request.data:
-            BrainSenseData, _ = database.queryRealtimeStreamData(request.user, request.data["RequestData"], int(request.data["RequestTimestamp"]), refresh=False)
-            BrainSenseData["Stimulation"] = database.processRealtimeStreamStimulationAmplitude(BrainSenseData)
-            StimPSD = database.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["ChannelID"], method="Spectrogram")
-            return Response(status=200, data=StimPSD)
+            Authority = {}
+            Authority["Level"] = database.verifyAccess(request.user, request.data["RequestData"])
+            if Authority["Level"] == 0:
+                return Response(status=403)
+
+            if Authority["Level"] == 1:
+                Authority["Permission"] = database.verifyPermission(request.user, request.data["RequestData"], Authority, "BrainSenseStream")
+                BrainSenseData, _ = database.queryRealtimeStreamData(request.user, request.data["RequestData"], int(request.data["RequestTimestamp"]), Authority, refresh=False)
+                if BrainSenseData == None:
+                    return Response(status=400)
+                BrainSenseData["Stimulation"] = database.processRealtimeStreamStimulationAmplitude(BrainSenseData)
+                StimPSD = database.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["ChannelID"], method="Spectrogram")
+                return Response(status=200, data=StimPSD)
+
+            elif Authority["Level"] == 2:
+                PatientInfo = database.extractAccess(request.user, request.data["RequestData"])
+                deidentification = database.extractPatientInfo(request.user, PatientInfo.authorized_patient_id)
+                DeviceIDs = [deidentification["Devices"][i]["ID"] for i in range(len(deidentification["Devices"]))]
+                if not request.data["requestData"] in DeviceIDs:
+                    return Response(status=403)
+                Authority["Permission"] = database.verifyPermission(request.user, PatientInfo.authorized_patient_id, Authority, "BrainSenseStream")
+                BrainSenseData, _ = database.queryRealtimeStreamData(request.user, request.data["RequestData"], int(request.data["RequestTimestamp"]), Authority, refresh=False)
+                if BrainSenseData == None:
+                    return Response(status=400)
+                BrainSenseData["Stimulation"] = database.processRealtimeStreamStimulationAmplitude(BrainSenseData)
+                StimPSD = database.processRealtimeStreamStimulationPSD(BrainSenseData, request.data["ChannelID"], method="Spectrogram")
+                return Response(status=200, data=StimPSD)
+                
+        return Response(status=404)

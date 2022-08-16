@@ -12,6 +12,8 @@ from datetime import datetime, date, timedelta
 import dateutil, pytz
 import pickle, joblib
 import pandas as pd
+from cryptography.fernet import Fernet
+import hashlib
 
 from scipy import signal, stats, optimize, interpolate
 import matplotlib.pyplot as plt
@@ -24,6 +26,7 @@ from PythonUtility import *
 import PerceptDashboard.models as models
 
 DATABASE_PATH = os.environ.get('DATASERVER_PATH')
+key = os.environ.get('ENCRYPTION_KEY')
 
 def extractUserInfo(user):
     userInfo = dict()
@@ -76,11 +79,19 @@ def colorTextFromCmap(color):
     colorText = f"#{hex(int(colorInfo[0])).replace('0x',''):0>2}{hex(int(colorInfo[1])).replace('0x',''):0>2}{hex(int(colorInfo[2])).replace('0x',''):0>2}"
     return colorText
 
-def retrievePatientInformation(PatientInformation, Institute):
-    FirstName = PatientInformation["PatientFirstName"]
-    LastName = PatientInformation["PatientLastName"]
-    Diagnosis = PatientInformation["Diagnosis"].replace("DiagnosisTypeDef.","")
-    MRN = PatientInformation["PatientId"]
+def retrievePatientInformation(PatientInformation, Institute, encoder=None):
+    if encoder:
+        FirstName = encoder.encrypt(PatientInformation["PatientFirstName"].capitalize().encode('utf_8')).decode("utf-8")
+        LastName = encoder.encrypt(PatientInformation["PatientLastName"].capitalize().encode('utf_8')).decode("utf-8")
+        Diagnosis = PatientInformation["Diagnosis"].replace("DiagnosisTypeDef.","")
+        MRN = encoder.encrypt(PatientInformation["PatientId"].encode('utf_8')).decode("utf-8")
+    else:
+        FirstName = PatientInformation["PatientFirstName"].capitalize()
+        LastName = PatientInformation["PatientLastName"].capitalize()
+        Diagnosis = PatientInformation["Diagnosis"].replace("DiagnosisTypeDef.","")
+        MRN = PatientInformation["PatientId"]
+
+    hashfield = hashlib.sha256((PatientInformation["PatientFirstName"].capitalize() + " " + PatientInformation["PatientLastName"].capitalize()).encode("utf-8")).hexdigest()
 
     try:
         PatientDateOfBirth = datetime.fromisoformat(PatientInformation["PatientDateOfBirth"][:-1]+"+00:00")
@@ -89,9 +100,9 @@ def retrievePatientInformation(PatientInformation, Institute):
 
     newPatient = False
     try:
-        patient = models.Patient.objects.get(first_name=FirstName, last_name=LastName, birth_date=PatientDateOfBirth, diagnosis=Diagnosis, institute=Institute)
+        patient = models.Patient.objects.get(patient_identifier_hashfield=hashfield, birth_date=PatientDateOfBirth, diagnosis=Diagnosis, institute=Institute)
     except:
-        patient = models.Patient(first_name=FirstName, last_name=LastName, birth_date=PatientDateOfBirth, diagnosis=Diagnosis, medical_record_number=MRN, institute=Institute)
+        patient = models.Patient(first_name=FirstName, last_name=LastName, patient_identifier_hashfield=hashfield, birth_date=PatientDateOfBirth, diagnosis=Diagnosis, medical_record_number=MRN, institute=Institute)
         patient.save()
         newPatient = True
 
@@ -376,103 +387,46 @@ def getPerceptDevices(user, patientUniqueID, authority):
     return availableDevices
 
 def processPerceptJSON(user, filename, rawBytes, device_deidentified_id="", process=True):
+    secureEncoder = Fernet(key)
     with open(DATABASE_PATH + "cache" + os.path.sep + filename, "wb+") as file:
-        file.write(rawBytes)
+        file.write(secureEncoder.encrypt(rawBytes))
 
     try:
-        JSON = Percept.decodeJSON(DATABASE_PATH + "cache" + os.path.sep + filename)
+        JSON = Percept.decodeEncryptedJSON(DATABASE_PATH + "cache" + os.path.sep + filename, key)
     except:
-        #os.remove(self.path + uniqueUserID + os.path.sep + filename)
         return "JSON Format Error: " + filename, None, None
 
     if not process:
         os.remove(DATABASE_PATH + "cache" + os.path.sep + filename)
         return "Success", None, JSON
 
-    """
-    if JSON["DeviceInformation"]["Initial"]["Neurostimulator"] != "Percept PC":
-        os.remove(DATABASE_PATH + "cache" + os.path.sep + filename)
-        return "Not Percept File: " + filename, None, None
-    """
-
-    if JSON["DeviceInformation"]["Initial"]["NeurostimulatorSerialNumber"] != "":
-        DeviceSerialNumber = JSON["DeviceInformation"]["Initial"]["NeurostimulatorSerialNumber"]
+    if JSON["DeviceInformation"]["Final"]["NeurostimulatorSerialNumber"] != "":
+        DeviceSerialNumber = secureEncoder.encrypt(JSON["DeviceInformation"]["Final"]["NeurostimulatorSerialNumber"].encode("utf-8")).decode("utf-8")
     else:
         DeviceSerialNumber = "Unknown"
+    deviceHashfield = hashlib.sha256(JSON["DeviceInformation"]["Final"]["NeurostimulatorSerialNumber"].encode("utf-8")).hexdigest()
 
     try:
         Data = Percept.extractPerceptJSON(JSON)
     except:
-        #os.remove(self.path + uniqueUserID + os.path.sep + filename)
         return "Decoding Error: " + filename, None, None
 
     SessionDate = datetime.fromtimestamp(Percept.estimateSessionDateTime(JSON),tz=pytz.utc)
     if user.is_clinician or user.is_admin:
-        deviceID = models.PerceptDevice.objects.filter(serial_number=DeviceSerialNumber, authority_level="Clinic", authority_user=user.institute).first()
+        deviceID = models.PerceptDevice.objects.filter(device_identifier_hashfield=deviceHashfield, authority_level="Clinic", authority_user=user.institute).first()
     else:
         deviceID = models.PerceptDevice.objects.filter(deidentified_id=device_deidentified_id, authority_level="Research", authority_user=user.email).first()
         if deviceID == None:
             return "Device ID Error: " + filename, None, None
 
-        DeviceInformation = JSON["DeviceInformation"]["Final"]
-        NeurostimulatorLocation = DeviceInformation["NeurostimulatorLocation"].replace("InsLocation.","")
-        ImplantDate = datetime.fromisoformat(DeviceInformation["ImplantDate"][:-1]+"+00:00")
-        LeadConfigurations = list()
-
-        LeadInformation = JSON["LeadConfiguration"]["Final"]
-        for lead in LeadInformation:
-            LeadConfiguration = dict()
-            LeadConfiguration["TargetLocation"] = lead["Hemisphere"].replace("HemisphereLocationDef.","") + " "
-            if lead["LeadLocation"] == "LeadLocationDef.Vim":
-                LeadConfiguration["TargetLocation"] += "VIM"
-            elif lead["LeadLocation"] == "LeadLocationDef.Stn":
-                LeadConfiguration["TargetLocation"] += "STN"
-            elif lead["LeadLocation"] == "LeadLocationDef.Gpi":
-                LeadConfiguration["TargetLocation"] += "GPi"
-            else:
-                LeadConfiguration["TargetLocation"] += lead["LeadLocation"].replace("LeadLocationDef.","")
-
-            if lead["ElectrodeNumber"] == "InsPort.ZERO_THREE":
-                LeadConfiguration["ElectrodeNumber"] = "E00-E03"
-            elif lead["ElectrodeNumber"] == "InsPort.ZERO_SEVEN":
-                LeadConfiguration["ElectrodeNumber"] = "E00-E07"
-            elif lead["ElectrodeNumber"] == "InsPort.EIGHT_ELEVEN":
-                LeadConfiguration["ElectrodeNumber"] = "E08-E11"
-            elif lead["ElectrodeNumber"] == "InsPort.EIGHT_FIFTEEN":
-                LeadConfiguration["ElectrodeNumber"] = "E08-E15"
-            if lead["Model"] == "LeadModelDef.LEAD_B33015":
-                LeadConfiguration["ElectrodeType"] = "SenSight B33015"
-            elif lead["Model"] == "LeadModelDef.LEAD_B33005":
-                LeadConfiguration["ElectrodeType"] = "SenSight B33005"
-            elif lead["Model"] == "LeadModelDef.LEAD_3387":
-                LeadConfiguration["ElectrodeType"] = "Medtronic 3387"
-            elif lead["Model"] == "LeadModelDef.LEAD_3389":
-                LeadConfiguration["ElectrodeType"] = "Medtronic 3389"
-            else:
-                LeadConfiguration["ElectrodeType"] = lead["Model"]
-
-            LeadConfigurations.append(LeadConfiguration)
-
-        deviceID.implant_date = ImplantDate
-        deviceID.device_location = NeurostimulatorLocation
-        deviceID.device_lead_configurations = LeadConfigurations
-        if "EstimatedBatteryLifeMonths" in JSON["BatteryInformation"].keys():
-            deviceID.device_eol_date = SessionDate + timedelta(days=30*JSON["BatteryInformation"]["EstimatedBatteryLifeMonths"])
-        else:
-            deviceID.device_eol_date = datetime.fromtimestamp(0, tz=pytz.utc)
-        deviceID.save()
-
     newPatient = None
     if deviceID == None:
         PatientInformation = JSON["PatientInformation"]["Final"]
-        patient, isNewPatient = retrievePatientInformation(PatientInformation, user.institute)
+        patient, isNewPatient = retrievePatientInformation(PatientInformation, user.institute, secureEncoder)
         if isNewPatient:
             newPatient = patient
             patient.institute = user.institute
             patient.save()
-        #### THIS IS FOR DEIDENTIFIED DATA
-        #if PatientInformation["FirstName"] == "" and PatientInformation["LastName"] == "":
-        #    PatientId = PatientInformation["PatientId"]
 
         DeviceInformation = JSON["DeviceInformation"]["Final"]
         DeviceType = DeviceInformation["Neurostimulator"]
@@ -526,11 +480,60 @@ def processPerceptJSON(user, filename, rawBytes, device_deidentified_id="", proc
             deviceID.device_eol_date = SessionDate + timedelta(days=30*JSON["BatteryInformation"]["EstimatedBatteryLifeMonths"])
         else:
             deviceID.device_eol_date = datetime.fromtimestamp(0, tz=pytz.utc)
+        deviceID.device_identifier_hashfield=deviceHashfield
         deviceID.save()
 
         patient.addDevice(str(deviceID.deidentified_id))
     else:
         patient = models.Patient.objects.filter(deidentified_id=deviceID.patient_deidentified_id).first()
+
+    DeviceInformation = JSON["DeviceInformation"]["Final"]
+    NeurostimulatorLocation = DeviceInformation["NeurostimulatorLocation"].replace("InsLocation.","")
+    ImplantDate = datetime.fromisoformat(DeviceInformation["ImplantDate"][:-1]+"+00:00")
+    LeadConfigurations = list()
+
+    LeadInformation = JSON["LeadConfiguration"]["Final"]
+    for lead in LeadInformation:
+        LeadConfiguration = dict()
+        LeadConfiguration["TargetLocation"] = lead["Hemisphere"].replace("HemisphereLocationDef.","") + " "
+        if lead["LeadLocation"] == "LeadLocationDef.Vim":
+            LeadConfiguration["TargetLocation"] += "VIM"
+        elif lead["LeadLocation"] == "LeadLocationDef.Stn":
+            LeadConfiguration["TargetLocation"] += "STN"
+        elif lead["LeadLocation"] == "LeadLocationDef.Gpi":
+            LeadConfiguration["TargetLocation"] += "GPI"
+        else:
+            LeadConfiguration["TargetLocation"] += lead["LeadLocation"].replace("LeadLocationDef.","")
+
+        if lead["ElectrodeNumber"] == "InsPort.ZERO_THREE":
+            LeadConfiguration["ElectrodeNumber"] = "E00-E03"
+        elif lead["ElectrodeNumber"] == "InsPort.ZERO_SEVEN":
+            LeadConfiguration["ElectrodeNumber"] = "E00-E07"
+        elif lead["ElectrodeNumber"] == "InsPort.EIGHT_ELEVEN":
+            LeadConfiguration["ElectrodeNumber"] = "E08-E11"
+        elif lead["ElectrodeNumber"] == "InsPort.EIGHT_FIFTEEN":
+            LeadConfiguration["ElectrodeNumber"] = "E08-E15"
+        if lead["Model"] == "LeadModelDef.LEAD_B33015":
+            LeadConfiguration["ElectrodeType"] = "SenSight B33015"
+        elif lead["Model"] == "LeadModelDef.LEAD_B33005":
+            LeadConfiguration["ElectrodeType"] = "SenSight B33005"
+        elif lead["Model"] == "LeadModelDef.LEAD_3387":
+            LeadConfiguration["ElectrodeType"] = "Medtronic 3387"
+        elif lead["Model"] == "LeadModelDef.LEAD_3389":
+            LeadConfiguration["ElectrodeType"] = "Medtronic 3389"
+        else:
+            LeadConfiguration["ElectrodeType"] = lead["Model"]
+
+        LeadConfigurations.append(LeadConfiguration)
+
+    deviceID.implant_date = ImplantDate
+    deviceID.device_location = NeurostimulatorLocation
+    deviceID.device_lead_configurations = LeadConfigurations
+    if "EstimatedBatteryLifeMonths" in JSON["BatteryInformation"].keys():
+        deviceID.device_eol_date = SessionDate + timedelta(days=30*JSON["BatteryInformation"]["EstimatedBatteryLifeMonths"])
+    else:
+        deviceID.device_eol_date = datetime.fromtimestamp(0, tz=pytz.utc)
+    deviceID.save()
 
     if SessionDate >= deviceID.device_last_seen:
         deviceID.device_last_seen = SessionDate
@@ -705,7 +708,7 @@ def extractAvailableRecordingList(user, researcher_id, patient_id):
         for recording in AvailableRecordings:
             if recording.recording_type == "ChronicLFPs":
                 continue
-            RecordingInfo = {"Device": device.serial_number, "ID": recording.recording_id, "Type": recording.recording_type,
+            RecordingInfo = {"Device": device.getDeviceSerialNumber(key), "ID": recording.recording_id, "Type": recording.recording_type,
                             "Date": recording.recording_date.timestamp(),
                             "Authorized": models.ResearchAuthorizedAccess.objects.filter(researcher_id=researcher_id, authorized_patient_id=patient_id, authorized_recording_id=recording.recording_id).exists()}
 
@@ -816,8 +819,8 @@ def AuthorizeRecordingAccess(user, researcher_id, patient_id, recording_id="", r
 
 def extractPatientTableRow(user, patient):
     info = dict()
-    info["FirstName"] = patient.first_name
-    info["LastName"] = patient.last_name
+    info["FirstName"] = patient.getPatientFirstName(key)
+    info["LastName"] = patient.getPatientLastName(key)
     if patient.diagnosis == "ParkinsonsDisease":
         info["Diagnosis"] = "Parkinson\'s Disease"
     else:
@@ -842,7 +845,7 @@ def extractPatientTableRow(user, patient):
 
         daysSinceImplant = np.round((datetime.now(tz=pytz.utc) - device.implant_date).total_seconds() / (3600*24))
         if device.device_name == "":
-            deviceName = device.serial_number
+            deviceName = device.getDeviceSerialNumber(key)
         else:
             deviceName = device.device_name
         info["DaysSinceImplant"] += f"{deviceName} ({device.device_type})"
@@ -859,15 +862,14 @@ def extractPatientTableRow(user, patient):
     return info
 
 def extractPatientInfo(user, patientUniqueID):
-
     patient = models.Patient.objects.get(deidentified_id=patientUniqueID)
     info = dict()
-    info["FirstName"] = patient.first_name
-    info["LastName"] = patient.last_name
+    info["FirstName"] = patient.getPatientFirstName(key)
+    info["LastName"] = patient.getPatientLastName(key)
     if user.is_clinician:
-        info["Name"] = patient.first_name + " " + patient.last_name
+        info["Name"] = info["FirstName"] + " " + info["LastName"]
     else:
-        info["Name"] = patient.first_name + " (" + patient.last_name + ")"
+        info["Name"] = info["FirstName"] + " (" + info["LastName"] + ")"
 
     info["Diagnosis"] = patient.diagnosis
     info["MRN"] = patient.medical_record_number
@@ -887,7 +889,7 @@ def extractPatientInfo(user, patientUniqueID):
         deviceInfo["ID"] = id
         deviceInfo["Location"] = device.device_location
         if device.device_name == "":
-            deviceInfo["DeviceName"] = device.serial_number
+            deviceInfo["DeviceName"] = device.getDeviceSerialNumber(key)
         else:
             deviceInfo["DeviceName"] = device.device_name
 
@@ -909,7 +911,7 @@ def queryTherapyHistory(user, patientUniqueID, authority):
     for device in availableDevices:
         TherapyChangeData = dict()
         TherapyChangeData["device"] = device.deidentified_id
-        TherapyChangeData["device_name"] = device.serial_number
+        TherapyChangeData["device_name"] = device.getDeviceSerialNumber(key)
         TherapyChangeHistory = models.TherapyChangeLog.objects.filter(device_deidentified_id=device.deidentified_id).order_by("date_of_change").all()
         if len(TherapyChangeHistory) > 0:
             TherapyChangeHistory = pd.DataFrame.from_records(TherapyChangeHistory.values("date_of_change", "previous_group", "new_group"))
@@ -978,7 +980,7 @@ def queryTherapyConfigurations(user, patientUniqueID, authority, therapy_type="P
             TherapyHistoryObjs = models.TherapyHistory.objects.filter(device_deidentified_id=device.deidentified_id, therapy_type=therapy_type).order_by("therapy_date").all()
 
         for therapy in TherapyHistoryObjs:
-            TherapyInfo = {"DeviceID": str(device.deidentified_id), "Device": device.serial_number, "DeviceLocation": device.device_location}
+            TherapyInfo = {"DeviceID": str(device.deidentified_id), "Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location}
             TherapyInfo["TherapyDate"] = therapy.therapy_date.timestamp()
             TherapyInfo["TherapyGroup"] = therapy.group_id
             TherapyInfo["TherapyType"] = therapy.therapy_type
@@ -1182,7 +1184,7 @@ def querySurveyResults(user, patientUniqueID, authority):
                 saveSourceFiles(survey, "BrainSenseSurvey", survey["Channel"], recording.recording_id)
             data = dict()
             if device.device_name == "":
-                data["DeviceName"] = device.serial_number
+                data["DeviceName"] = device.getDeviceSerialNumber(key)
             else:
                 data["DeviceName"] = device.device_name
             data["Timestamp"] = recording.recording_date.timestamp()
@@ -1211,7 +1213,7 @@ def queryMontageDataOverview(user, patientUniqueID, authority):
 
             data = dict()
             if device.device_name == "":
-                data["DeviceName"] = device.serial_number
+                data["DeviceName"] = device.getDeviceSerialNumber(key)
             else:
                 data["DeviceName"] = device.device_name
             data["Timestamp"] = recording.recording_date.timestamp()
@@ -1231,7 +1233,7 @@ def queryPatientEventPSDsByTime(user, patientUniqueID, timeRange, authority):
             leads = device.device_lead_configurations
             for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
                 if device.device_name == "":
-                    PatientEventPSDs.append({"Device": device.serial_number, "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "EventTime": list(), "Therapy": list()})
+                    PatientEventPSDs.append({"Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "EventTime": list(), "Therapy": list()})
                 else:
                     PatientEventPSDs.append({"Device": device.device_name, "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "EventTime": list(), "Therapy": list()})
 
@@ -1279,7 +1281,7 @@ def queryPatientEventPSDs(user, patientUniqueID, TherapyHistory, authority):
             leads = device.device_lead_configurations
             for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
                 if device.device_name == "":
-                    PatientEventPSDs.append({"Device": device.serial_number, "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "Therapy": list()})
+                    PatientEventPSDs.append({"Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "Therapy": list()})
                 else:
                     PatientEventPSDs.append({"Device": device.device_name, "DeviceLocation": device.device_location, "PSDs": list(), "EventName": list(), "Therapy": list()})
 
@@ -1362,7 +1364,7 @@ def queryChronicLFPsByTime(user, patientUniqueID, timeRange, EventNames, authori
             if not recording == None:
                 ChronicLFPs = loadSourceFiles(recording.recording_type,hemisphere.replace("HemisphereLocationDef.",""),recording.recording_id)
                 if device.device_name == "":
-                    LFPTrends.append({"Device": device.serial_number, "DeviceLocation": device.device_location})
+                    LFPTrends.append({"Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location})
                 else:
                     LFPTrends.append({"Device": device.device_name, "DeviceLocation": device.device_location})
 
@@ -1452,7 +1454,7 @@ def queryChronicLFPs(user, patientUniqueID, TherapyHistory, authority):
             if not recording == None:
                 ChronicLFPs = loadSourceFiles(recording.recording_type,hemisphere.replace("HemisphereLocationDef.",""),recording.recording_id)
                 if device.device_name == "":
-                    LFPTrends.append({"Device": device.serial_number, "DeviceLocation": device.device_location})
+                    LFPTrends.append({"Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location})
                 else:
                     LFPTrends.append({"Device": device.device_name, "DeviceLocation": device.device_location})
 
@@ -1667,7 +1669,7 @@ def queryEventPSDs(user, patientUniqueID, therapyHistory, authority):
 
             leads = device.device_lead_configurations
 
-            EventPSDs.append({"Device": device.serial_number, "DeviceLocation": device.device_location})
+            EventPSDs.append({"Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location})
             for therapy in TherapyHistory:
                 if therapy["device"] == device.deidentified_id:
                     for i in range(len(therapy["date_of_change"])-1):
@@ -1680,7 +1682,7 @@ def queryEventPSDs(user, patientUniqueID, therapyHistory, authority):
 
             for hemisphere in ["HemisphereLocationDef.Left","HemisphereLocationDef.Right"]:
                 if np.any(ChronicLFPs["hemisphere"] == hemisphere):
-                    LFPTrends.append({"Device": device.serial_number, "DeviceLocation": device.device_location})
+                    LFPTrends.append({"Device": device.getDeviceSerialNumber(key), "DeviceLocation": device.device_location})
                     for lead in leads:
                         if lead["TargetLocation"].startswith(hemisphere.replace("HemisphereLocationDef.","")):
                             LFPTrends[-1]["Hemisphere"] = lead["TargetLocation"]
@@ -1767,7 +1769,7 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
                 continue
 
             data["RecordingID"] = recording.recording_id
-            data["DeviceName"] = device.serial_number
+            data["DeviceName"] = device.getDeviceSerialNumber(key)
             data["DeviceID"] = device.deidentified_id
             data["DeviceLocation"] = device.device_location
             data["Channels"] = list()
@@ -2010,7 +2012,7 @@ def queryAvailableSessionFiles(user, patient_id, authority):
             if not device.device_name == "":
                 sessionInfo["DeviceName"] = device.device_name
             else:
-                sessionInfo["DeviceName"] = device.serial_number
+                sessionInfo["DeviceName"] = device.getDeviceSerialNumber(key)
             sessionInfo["SessionFilename"] = session.session_source_filename
             sessionInfo["SessionID"] = session.deidentified_id
 

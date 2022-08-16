@@ -1,14 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Oct 5th, 2020
-
-A simple compilable python script that uses native JSON decoder to decode JSON 
-struct and save as MAT file format using Scipy. 
-
-Can be called from MATLAB if MATLAB is older than 2016b and is not natively 
-supporting JSON decoder. 
-
-@author: Jackson Cagle
+Give a general description of UF AO MPX File here.
+@author: Jackson Cagle, University of Florida
+@email: jackson.cagle@neurology.ufl.edu
 """
 
 import json
@@ -20,11 +14,12 @@ import numpy as np
 from datetime import datetime, timezone
 import pickle
 import dateutil
-from PythonUtility import *
 import pandas as pd
-
-import SignalProcessingUtility as SPU
 from scipy import optimize
+from cryptography.fernet import Fernet
+
+from PythonUtility import *
+import SignalProcessingUtility as SPU
 
 def formatLFPTrendTimestamp(dictionary):
     for key in list(dictionary.keys()):
@@ -96,6 +91,12 @@ def estimateSessionDateTime(JSON):
 def decodeJSON(inputFilename):
     Data = json.load(open(inputFilename, encoding='utf-8'))
     return Data
+
+def decodeEncryptedJSON(inputFilename, key):
+    secureEncoder = Fernet(key)
+    with open(inputFilename, "rb") as file:
+        Data = json.loads(secureEncoder.decrypt(file.read()))
+        return Data
 
 def concatenateJSONs(JSONs):
     # Get the list of fields in all JSONs
@@ -520,7 +521,7 @@ def checkMissingPackage(Data):
                     Data["StreamingTD"][nStream]["PacketSizes"] = np.concatenate((Data["StreamingTD"][nStream]["PacketSizes"][:insertionIndex], PacketSize*np.ones(numMissingPacket), Data["StreamingTD"][nStream]["PacketSizes"][insertionIndex:]))
                     Data["StreamingTD"][nStream]["Data"] = np.concatenate((Data["StreamingTD"][nStream]["Data"][:startIndex],np.zeros((PacketSize*numMissingPacket)),Data["StreamingTD"][nStream]["Data"][startIndex:]))
                     Data["StreamingTD"][nStream]["Missing"] = np.concatenate((Data["StreamingTD"][nStream]["Missing"][:startIndex],np.ones((PacketSize*numMissingPacket)),Data["StreamingTD"][nStream]["Missing"][startIndex:]))
-                Data["StreamingTD"][nStream]["Time"] = np.array(range(len(Data["StreamingTD"][nStream]["Data"]))) / Data["StreamingTD"][nStream]["SamplingRate"] - TimePerPackage
+                Data["StreamingTD"][nStream]["Time"] = np.array(range(len(Data["StreamingTD"][nStream]["Data"]))) / Data["StreamingTD"][nStream]["SamplingRate"]
                 #print(f"Warning: Missing sequence occured for Stream #{nStream}, Data insertion complete. Check ['Missing'] field.")
             
             # Check Power Channel Now
@@ -1630,6 +1631,168 @@ def processIndefiniteStream(JSON, Data, cacheFilename=None):
                 pickle.dump(MontageStream, fileHandler)
 
     return MontageStream
+
+def extractPredictionModel(Data, nStream, CenterFrequency=-1, Normalized=False):
+    PredictionModel = dict()
+    
+    if CenterFrequency < 0:
+        CenterFrequency = Data["StreamingTD"][nStream]["Spectrum"]["PredictedCenterFrequency"]
+    PowerSelection = np.bitwise_and(Data["StreamingTD"][nStream]["Spectrum"]["Frequency"] > CenterFrequency - 3, Data["StreamingTD"][nStream]["Spectrum"]["Frequency"] <= CenterFrequency + 3)
+
+    if Normalized:
+        SpectralFeature = np.mean(Data["StreamingTD"][nStream]["Spectrum"]["NormalizedPower"][PowerSelection,:],axis=0)
+    else:
+        SpectralFeature = np.mean(Data["StreamingTD"][nStream]["Spectrum"]["SegmentedPower"][PowerSelection,:],axis=0)
+
+    xdata = np.zeros(0)
+    ydata = np.zeros(0)
+    for level in range(len(Data["StreamingTD"][nStream]["Spectrum"]["StimulationLevels"])):
+        if len(SpectralFeature[Data["StreamingTD"][nStream]["Spectrum"]["StimulationAmplitude"] == Data["StreamingTD"][nStream]["Spectrum"]["StimulationLevels"][level]]) > 15:
+            FeaturePower = SpectralFeature[Data["StreamingTD"][nStream]["Spectrum"]["StimulationAmplitude"] == Data["StreamingTD"][nStream]["Spectrum"]["StimulationLevels"][level]]
+            FeaturePower = SPU.removeOutlier(FeaturePower, method="zscore")
+            #FeaturePower = SPU.removeOutlier(SPU.smooth(FeaturePower,5)[::5], method="zscore")
+            #FeaturePower = np.mean(FeaturePower)
+            ydata = np.append(ydata, FeaturePower)
+            xdata = np.append(xdata, np.ones(FeaturePower.shape)*Data["StreamingTD"][nStream]["Spectrum"]["StimulationLevels"][level])
+
+    if len(ydata) == 0:
+        return PredictionModel
+
+    PowerDecayFitFound = False
+    try:
+        scale = np.percentile(ydata,95)
+        #ModelBounds = (0,[np.inf,20,np.inf,np.inf])
+        ModelBounds = ([-np.inf,np.inf])
+        parameters, fit_covariance = optimize.curve_fit(SPU.PowerDecayFunc, xdata, ydata/scale, bounds=ModelBounds, method="trf")
+        ConfidenceError = np.sqrt(np.diag(fit_covariance))
+        FitError = np.mean(np.power(ydata/scale - SPU.PowerDecayFunc(xdata, *parameters),2))
+        fitted_xdata = np.linspace(np.min(xdata),np.max(xdata),int(np.max(xdata)-np.min(xdata))*10)
+        fitted_line = SPU.PowerDecayFunc(fitted_xdata, *parameters)*scale
+        PowerDecayFitFound = True
+    except:
+        pass
+
+    InverseSigmoidFound = False
+    try:
+        scale = np.percentile(ydata,95)
+        #ModelBounds = (0,[np.inf,100,np.max(xdata),np.inf])
+        ModelBounds = ([-np.inf,np.inf])
+        parameters, fit_covariance = optimize.curve_fit(SPU.InverseSigmoidFunc, xdata, ydata/scale, bounds=ModelBounds, method="trf")
+        ConfidenceError = np.sqrt(np.diag(fit_covariance))
+        ModelError = np.mean(np.power(ydata/scale - SPU.InverseSigmoidFunc(xdata, *parameters),2))
+        if PowerDecayFitFound:
+            if ModelError <= FitError:
+                fitted_xdata = np.linspace(np.min(xdata),np.max(xdata),int(np.max(xdata)-np.min(xdata))*10)
+                fitted_line = SPU.InverseSigmoidFunc(fitted_xdata, *parameters)*scale
+                FitError = ModelError
+                InverseSigmoidFound = True
+        else:
+            fitted_xdata = np.linspace(np.min(xdata),np.max(xdata),int(np.max(xdata)-np.min(xdata))*10)
+            fitted_line = SPU.InverseSigmoidFunc(fitted_xdata, *parameters)*scale
+            FitError = ModelError
+            InverseSigmoidFound = True
+    except:
+        pass
+    
+    if PowerDecayFitFound or InverseSigmoidFound:
+        if fitted_line[-1] > fitted_line[0]:
+            PredictionModel["StimulationArtifacts"] = True
+        else:
+            PredictionModel["StimulationArtifacts"] = False
+        PredictionModel["MaximumChanges"] = np.max(fitted_line) - np.min(fitted_line)
+        PredictionModel["FinalLevel"] = np.min(fitted_line)
+        PredictionModel["TransitionalPoint"] = fitted_xdata[np.argmax(np.abs(np.diff(fitted_line)))]
+        PredictionModel["SuggestionAmplitude"] = fitted_xdata[np.argmin(np.abs(fitted_line - PredictionModel["MaximumChanges"]*0.05 - PredictionModel["FinalLevel"]))]
+        PredictionModel["AmplitudeError"] = ConfidenceError[0]/parameters[0]
+        PredictionModel["SlopeError"] = ConfidenceError[1]/parameters[1]
+        PredictionModel["ShiftError"] = ConfidenceError[2]/parameters[2]
+        PredictionModel["OffsetError"] = ConfidenceError[3]/parameters[3]
+        PredictionModel["FitError"] = FitError
+        PredictionModel["ModelError"] = np.divide(ConfidenceError,parameters)
+
+    return PredictionModel
+
+def extractPredictionForStimulation(xdata, ydata):
+    uniqueAmplitude = np.unique(xdata)
+    simplifiedYData = []
+    for i in range(len(uniqueAmplitude)):
+        simplifiedYData.append(np.median(ydata[xdata==uniqueAmplitude[i]]))
+    
+    PredictionModel = dict()
+    PredictionData = dict()
+    
+    PowerDecayFitFound = False
+    try:
+        if len(simplifiedYData) > 4:
+            scale = np.percentile(ydata,95)
+            #ModelBounds = (0,[np.inf,20,np.inf,np.inf])
+            ModelBounds = ([-np.inf,np.inf])
+            parameters, fit_covariance = optimize.curve_fit(SPU.PowerDecayFunc, uniqueAmplitude+0.1, simplifiedYData, p0=[1,1,1,15], bounds=ModelBounds, method="trf")
+            ConfidenceError = np.sqrt(np.diag(fit_covariance))
+            FitError = np.mean(np.power(ydata/scale - SPU.PowerDecayFunc(xdata, *parameters),2))
+            fitted_xdata = np.linspace(np.min(xdata),np.max(xdata),int(np.max(xdata)-np.min(xdata))*10)
+            fitted_line = SPU.PowerDecayFunc(fitted_xdata, *parameters)*scale
+            PowerDecayFitFound = True
+        else:
+            scale = np.percentile(ydata,95)
+            #ModelBounds = (0,[np.inf,20,np.inf,np.inf])
+            ModelBounds = ([-np.inf,np.inf])
+            parameters, fit_covariance = optimize.curve_fit(SPU.PowerDecayFunc, xdata, ydata/scale, bounds=ModelBounds, method="trf")
+            ConfidenceError = np.sqrt(np.diag(fit_covariance))
+            FitError = np.mean(np.power(ydata/scale - SPU.PowerDecayFunc(xdata, *parameters),2))
+            fitted_xdata = np.linspace(np.min(xdata),np.max(xdata),int(np.max(xdata)-np.min(xdata))*10)
+            fitted_line = SPU.PowerDecayFunc(fitted_xdata, *parameters)*scale
+            PowerDecayFitFound = True
+    except:
+        pass
+
+    InverseSigmoidFound = False
+    try:
+        scale = np.percentile(ydata,95)
+        #ModelBounds = (0,[np.inf,100,np.max(xdata),np.inf])
+        ModelBounds = ([-np.inf,np.inf])
+        parameters, fit_covariance = optimize.curve_fit(SPU.InverseSigmoidFunc, xdata, ydata/scale, bounds=ModelBounds, method="trf")
+        ConfidenceError = np.sqrt(np.diag(fit_covariance))
+        ModelError = np.mean(np.power(ydata/scale - SPU.InverseSigmoidFunc(xdata, *parameters),2))
+        if PowerDecayFitFound:
+            if ModelError <= FitError:
+                fitted_xdata = np.linspace(np.min(xdata),np.max(xdata),int(np.max(xdata)-np.min(xdata))*10)
+                fitted_line = SPU.InverseSigmoidFunc(fitted_xdata, *parameters)*scale
+                FitError = ModelError
+                InverseSigmoidFound = True
+        else:
+            fitted_xdata = np.linspace(np.min(xdata),np.max(xdata),int(np.max(xdata)-np.min(xdata))*10)
+            fitted_line = SPU.InverseSigmoidFunc(fitted_xdata, *parameters)*scale
+            FitError = ModelError
+            InverseSigmoidFound = True
+    except:
+        pass
+    
+    if PowerDecayFitFound or InverseSigmoidFound:
+        if len(fitted_line) == 0:
+            return PredictionModel, PredictionData
+    
+        if fitted_line[-1] > fitted_line[0]:
+            PredictionModel["StimulationArtifacts"] = True
+        else:
+            PredictionModel["StimulationArtifacts"] = False
+            
+        PredictionData["FittedLine"] = fitted_line
+        PredictionData["StimulationAmplitude"] = fitted_xdata
+        
+        PredictionModel["MaximumChanges"] = np.max(fitted_line) - np.min(fitted_line)
+        PredictionModel["FinalLevel"] = np.min(fitted_line)
+        PredictionModel["TransitionalPoint"] = fitted_xdata[np.argmax(np.abs(np.diff(fitted_line)))]
+        PredictionModel["SuggestionAmplitude"] = fitted_xdata[np.argmin(np.abs(fitted_line - PredictionModel["MaximumChanges"]*0.05 - PredictionModel["FinalLevel"]))]
+        PredictionModel["AmplitudeError"] = ConfidenceError[0]/parameters[0]
+        PredictionModel["SlopeError"] = ConfidenceError[1]/parameters[1]
+        PredictionModel["ShiftError"] = ConfidenceError[2]/parameters[2]
+        PredictionModel["OffsetError"] = ConfidenceError[3]/parameters[3]
+        PredictionModel["FitError"] = FitError
+        PredictionModel["ModelError"] = np.divide(ConfidenceError,parameters)
+
+    return PredictionModel, PredictionData
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 3:

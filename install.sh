@@ -7,7 +7,7 @@ sudo apt-get install python3-pip libjpeg-dev libjpeg8-dev libpng-dev apache2 lib
 
 virtualenv $SCRIPT_DIR/PerceptPlatformEnv
 source $SCRIPT_DIR/PerceptPlatformEnv/bin/activate
-pip3 install django djangorestframework numpy scipy pandas spectrum mysqlclient requests websocket-client joblib
+pip3 install django djangorestframework numpy scipy pandas spectrum mysqlclient requests websocket-client joblib cryptography
 
 ADMIN_EMAIL='Admin@PerceptPlatform.demo'
 ADMIN_PASSWORD=`cat /dev/urandom | tr -dc '[:alpha:]' | fold -w ${1:-20} | head -n 1`

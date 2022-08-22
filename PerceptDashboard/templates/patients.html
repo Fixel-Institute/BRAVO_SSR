@@ -300,7 +300,12 @@ async function requestPUTFile(el, SessionView)
     else
     {
       var files = el.files;
-      showNotification("danger", "top", "right", files[currentFileProgress].name + " failed to upload", 10000)
+      console.log(files[currentFileProgress].name + " failed to upload");
+      try {
+        showNotification("danger", "top", "right", files[currentFileProgress].name + " failed to upload", 10000)
+      } catch (error) {
+        console.log(error);
+      }
       currentFileProgress++
       updateProgressBar(currentFileProgress / maxFiles * 100);
     }

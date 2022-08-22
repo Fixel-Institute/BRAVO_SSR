@@ -234,7 +234,17 @@ class PatientInformationUpdate(RestViews.APIView):
                 if request.data["StudyName"] == "" or request.data["StudyID"] == "":
                     return Response(status=400)
                 data = dict()
-                patient = models.Patient(first_name=request.data["StudyID"], last_name=request.data["StudyName"], diagnosis=request.data["Diagnosis"], institute=request.user.email)
+                
+                patient, isNewPatient = database.retrievePatientInformation({
+                    "PatientFirstName": request.data["StudyID"],
+                    "PatientLastName": request.data["StudyName"],
+                    "Diagnosis": request.data["Diagnosis"],
+                    "PatientDateOfBirth": 0,
+                    "PatientId": "Unknown",
+                }, request.user.email)
+
+                if not isNewPatient:
+                    return Response(status=404)
 
                 if "saveDeviceID" in request.data and not request.user.is_clinician:
                     device = models.PerceptDevice(patient_deidentified_id=patient.deidentified_id, serial_number=request.data["saveDeviceID"], device_name=request.data["newDeviceName"], device_location=request.data["newDeviceLocation"])

@@ -80,16 +80,13 @@ def colorTextFromCmap(color):
     return colorText
 
 def retrievePatientInformation(PatientInformation, Institute, encoder=None):
-    if encoder:
-        FirstName = encoder.encrypt(PatientInformation["PatientFirstName"].capitalize().encode('utf_8')).decode("utf-8")
-        LastName = encoder.encrypt(PatientInformation["PatientLastName"].capitalize().encode('utf_8')).decode("utf-8")
-        Diagnosis = PatientInformation["Diagnosis"].replace("DiagnosisTypeDef.","")
-        MRN = encoder.encrypt(PatientInformation["PatientId"].encode('utf_8')).decode("utf-8")
-    else:
-        FirstName = PatientInformation["PatientFirstName"].capitalize()
-        LastName = PatientInformation["PatientLastName"].capitalize()
-        Diagnosis = PatientInformation["Diagnosis"].replace("DiagnosisTypeDef.","")
-        MRN = PatientInformation["PatientId"]
+    if not encoder:
+        encoder = secureEncoder = Fernet(key)
+        
+    FirstName = encoder.encrypt(PatientInformation["PatientFirstName"].capitalize().encode('utf_8')).decode("utf-8")
+    LastName = encoder.encrypt(PatientInformation["PatientLastName"].capitalize().encode('utf_8')).decode("utf-8")
+    Diagnosis = PatientInformation["Diagnosis"].replace("DiagnosisTypeDef.","")
+    MRN = encoder.encrypt(PatientInformation["PatientId"].encode('utf_8')).decode("utf-8")
 
     hashfield = hashlib.sha256((PatientInformation["PatientFirstName"].capitalize() + " " + PatientInformation["PatientLastName"].capitalize()).encode("utf-8")).hexdigest()
 

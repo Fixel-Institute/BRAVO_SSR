@@ -823,7 +823,7 @@ class ChronicLFPView(RestViews.APIView):
             EventNames = uniqueList(Events)
 
             data["ChronicData"] = database.processChronicLFPs(data["ChronicData"], EventNames, int(request.data["timezoneOffset"]))
-            #data["EventPSDs"] = database.processEventPSDs(data["EventPSDs"], EventNames)
+            data["EventPSDs"] = database.processEventPSDs(data["EventPSDs"], EventNames)
             data["EventMarker"] = database.processEventMarkers(data["ChronicData"], EventNames)
             #data["CustomEvent"] = database.queryEventPSDs(request.user, request.data["requestData"], TherapyHistory)
             return Response(status=200, data=data)

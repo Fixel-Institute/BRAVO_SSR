@@ -108,7 +108,9 @@
                 <td>
                   <div class="d-flex">
                     <div class="d-flex flex-column justify-content-center">
-                      <h6 class="mb-0 text-sm">{{device.ImplantDate}}</h6>
+                      {% if User.Clinician %}
+                        <h6 class="mb-0 text-sm">{{device.ImplantDate}}</h6>
+                      {% endif %}
                     </div>
                   </div>
                 </td>

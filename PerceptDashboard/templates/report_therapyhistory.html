@@ -332,18 +332,22 @@ function populateTherapyConfigurationViews(data)
     accordionContent = accordionContent.replaceAll("{collapseID}","Collapse" + formatDateString(dateStruct, "{%Y}_{%B}_{%D}"))
     accordionContent = accordionContent.replaceAll("{TherapyDateID}",formatDateString(dateStruct,"{%B}{%D}_{%Y}"))
 
+    var deviceNames = {}
     var allContents = {}
     for (var j = 0; j < data[therapyDates[i]].length; j++)
     {
-      if (!allContents.hasOwnProperty(data[therapyDates[i]][j]["Device"])) allContents[data[therapyDates[i]][j]["Device"]] = ""
-      allContents[data[therapyDates[i]][j]["Device"]] += formatRowContent(data[therapyDates[i]][j]["Overview"])
+      if (!allContents.hasOwnProperty(data[therapyDates[i]][j]["DeviceID"])) {
+        allContents[data[therapyDates[i]][j]["DeviceID"]] = "";
+        deviceNames[data[therapyDates[i]][j]["DeviceID"]] = data[therapyDates[i]][j]["Device"]
+      }
+      allContents[data[therapyDates[i]][j]["DeviceID"]] += formatRowContent(data[therapyDates[i]][j]["Overview"])
     }
 
     var tableInnerHTML = ""
     var deviceIDs = Object.keys(allContents)
     for (var j = 0; j < deviceIDs.length; j++)
     {
-      tableInnerHTML += therapyTableTemplate.replaceAll("{AllRowContents}",allContents[deviceIDs[j]]).replaceAll("{DeviceName}",deviceIDs[j])
+      tableInnerHTML += therapyTableTemplate.replaceAll("{AllRowContents}",allContents[deviceIDs[j]]).replaceAll("{DeviceName}",deviceNames[deviceIDs[j]])
     }
     accordionContent = accordionContent.replaceAll("{TherapyDetailTables}",tableInnerHTML)
 

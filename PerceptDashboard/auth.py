@@ -58,13 +58,19 @@ class userAuth(RestViews.APIView):
     def post(self, request):
         if "Email" in request.POST and "Password" in request.POST:
             user = authenticate(request, username=request.POST["Email"], password=request.POST["Password"])
-        if user is not None:
+        elif "Email" in request.POST:
+            if request.POST["Email"] == "RequestDemoAccess":
+                user = authenticate(request, username="Demo@bravo.edu", password="Demo1234")
 
+        if user is not None:
             if not models.UserConfigurations.objects.filter(user_id=user.uniqueUserID).exists():
                 models.UserConfigurations(user_id=user.uniqueUserID).save()
 
             login(request, user)
             request.session.set_expiry(3600)
+            if request.POST["Email"] == "RequestDemoAccess":
+                request.session.set_expiry(0)
+
             return redirect("index")
         else:
             return Response(status=201, data={"message": "Incorrect Credentials"})

@@ -9,6 +9,7 @@ import modules.LocalPerceptDatabase as database
 import json
 import datetime, pytz
 import Percept
+import random, string
 import copy
 
 from PythonUtility import *
@@ -18,18 +19,6 @@ from . import models
 # Create your views here.
 def index(request):
     return redirect("patients")
-
-    if not request.user.is_authenticated:
-        return redirect("signin")
-
-    if not "ProcessingSettings" in request.session:
-        request.session["ProcessingSettings"] = database.retrieveProcessingSettings(request.user)
-        request.session.modified = True
-
-    context = dict()
-    context["User"] = database.extractUserInfo(request.user)
-    context["PageView"] = {"ExpandProcessed": False}
-    return render(request, "dashboard.html", context=context)
 
 def patientList(request):
     if not request.user.is_authenticated:
@@ -161,6 +150,9 @@ class PatientSessionFiles(RestViews.APIView):
             return Response(status=404)
 
         if "session_id" in request.data and "deleteSession" in request.data:
+            if request.user.email == "Demo@bravo.edu":
+                return Response(status=404)
+
             Authority = {}
             Authority["Level"] = database.verifyAccess(request.user, request.data["deleteSession"])
             if Authority["Level"] == 0:
@@ -196,17 +188,7 @@ class PatientSessionReport(RestViews.APIView):
         if not "SessionJsonId" in request.session and not "SessionOverview" in request.session:
             return redirect("patients")
 
-        if request.session["patient_deidentified_id"] == "TemporarySession" or request.user.is_clinician:
-            context = dict()
-            context["User"] = database.extractUserInfo(request.user)
-            context["PageView"] = {"ExpandProcessed": True}
-            context["SessionOverview"] = copy.deepcopy(request.session["SessionOverview"])
-            request.session["SessionOverview"] = None
-            request.session["patient_deidentified_id"] = ""
-            request.session.modified = True
-            context["PatientID"] = ""
-            context["Patient"] = {"Name": "TemporarySession"}
-        else:
+        if "SessionJsonId" in request.session:
             Authority = {}
             Authority["Level"] = database.verifyAccess(request.user, request.session["patient_deidentified_id"])
             if Authority["Level"] == 0:
@@ -220,6 +202,17 @@ class PatientSessionReport(RestViews.APIView):
             request.session.modified = True
             context["PatientID"] = request.session["patient_deidentified_id"]
             context["Patient"] = database.extractPatientInfo(request.user, context["PatientID"])
+        elif request.session["patient_deidentified_id"] == "TemporarySession" or request.user.is_clinician:
+            context = dict()
+            context["User"] = database.extractUserInfo(request.user)
+            context["PageView"] = {"ExpandProcessed": True}
+            context["SessionOverview"] = copy.deepcopy(request.session["SessionOverview"])
+            request.session["SessionOverview"] = None
+            request.session["patient_deidentified_id"] = ""
+            request.session.modified = True
+            context["PatientID"] = ""
+            context["Patient"] = {"Name": "TemporarySession"}
+            
         return render(request, "report_sessionreport.html", context=context)
 
 class PatientInformationUpdate(RestViews.APIView):
@@ -229,9 +222,12 @@ class PatientInformationUpdate(RestViews.APIView):
         if not request.user.is_authenticated:
             return Response(status=404)
 
+        if request.user.email == "Demo@bravo.edu":
+            return Response(status=404)
+
         if "createNewPatientInfo" in request.data:
-            if "StudyID" in request.data and "StudyName" in request.data and "Diagnosis" in request.data:
-                if request.data["StudyName"] == "" or request.data["StudyID"] == "":
+            if "StudyID" in request.data and "StudyName" in request.data and "Diagnosis" in request.data and "saveDeviceID" in request.data:
+                if request.data["StudyName"] == "" or request.data["StudyID"] == "" or request.data["saveDeviceID"] == "":
                     return Response(status=400)
                 data = dict()
                 
@@ -246,8 +242,9 @@ class PatientInformationUpdate(RestViews.APIView):
                 if not isNewPatient:
                     return Response(status=404)
 
-                if "saveDeviceID" in request.data and not request.user.is_clinician:
-                    device = models.PerceptDevice(patient_deidentified_id=patient.deidentified_id, serial_number=request.data["saveDeviceID"], device_name=request.data["newDeviceName"], device_location=request.data["newDeviceLocation"])
+                if not request.user.is_clinician:
+                    serial_number = "".join(random.choices(string.ascii_uppercase + string.digits, k=32))
+                    device = models.PerceptDevice(patient_deidentified_id=patient.deidentified_id, serial_number=serial_number, device_name=request.data["saveDeviceID"], device_location=request.data["newDeviceLocation"])
                     device.device_eol_date = datetime.datetime.fromtimestamp(0, tz=pytz.utc)
                     device.authority_level = "Research"
                     device.authority_user = request.user.email
@@ -422,6 +419,9 @@ class ResolveTherapyHistoryConflicts(RestViews.APIView):
 
     def post(self, request):
         if not request.user.is_authenticated:
+            return Response(status=404)
+
+        if request.user.email == "Demo@bravo.edu":
             return Response(status=404)
 
         if "removeTherapyLog" in request.data:
@@ -1041,6 +1041,9 @@ class SessionUpload(RestViews.APIView):
             return Response(status=404)
 
         if not "file" in request.data:
+            return Response(status=404)
+
+        if request.user.email == "Demo@bravo.edu":
             return Response(status=404)
 
         rawBytes = request.data["file"].read()

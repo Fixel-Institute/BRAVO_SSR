@@ -1,7 +1,7 @@
 {% extends 'dashboard_basic.html' %}
 {% load static %}
 
-{% block pageTitle %} Patient List - Percept Analysis Platform {% endblock %}
+{% block pageTitle %} Patient List - UF BRAVO Platform {% endblock %}
 
 {% block breadcrumb %}
 <nav aria-label="breadcrumb">
@@ -11,7 +11,7 @@
         <i class="ni ni-app"></i>
       </a>
     </li>
-    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">Percept Analysis Platform</a></li>
+    <li class="breadcrumb-item text-sm text-white"><a class="opacity-5 text-white" href="/index">UF BRAVO Platform</a></li>
     <li class="breadcrumb-item text-sm text-white active">Patients</li>
   </ol>
   <h6 class="font-weight-bolder mb-0 text-white">Patient List</h6>
@@ -164,18 +164,21 @@
           <div class="card-header text-start">
             <h3 class="font-weight-bold mb-1">New Patient Information</h3>
             <p class="mb-0">Edit desired fields and click create</p>
+            {% if User.Demo %}
+              <p class="mb-0"><b>(* Demo Account cannot upload data )</b></p>
+            {% endif %}
           </div>
           <div class="card-body">
             <form role="form text-start">
               <div class="row">
                 <div class="col-6">
-                  <label>Patient Identifier</label>
+                  <label>Patient Identifier (*required)</label>
                   <div class="input-group mb-3">
                     <input id="PatientFirstNameInput" type="text" class="form-control" placeholder="Study Identifier" aria-label="Patient Identifier" value="">
                   </div>
                 </div>
                 <div class="col-6">
-                  <label>Patient Project Name</label>
+                  <label>Patient Project Name (*required)</label>
                   <div class="input-group mb-3">
                     <input id="PatientLastNameInput" type="text" class="form-control" placeholder="Study Name" aria-label="Patient Study" value="">
                   </div>
@@ -188,21 +191,17 @@
 
               <div class="row">
                 <div class="col-6">
-                  <label>Device Serial Number</label>
-                  <div class="input-group mb-3">
-                    <input id="DeviceSerialNumberInput" type="text" class="form-control" placeholder="Serial Number" aria-label="Device Serial Number" value="">
-                  </div>
-                </div>
-                <div class="col-6">
-                  <label>Device Name</label>
+                  <label>Device Name (*required for uploading data)</label>
                   <div class="input-group mb-3">
                     <input id="NewDeviceNameInput" type="text" class="form-control" placeholder="Display Name" aria-label="Device Name" value="">
                   </div>
                 </div>
-              </div>
-              <label>Device Location</label>
-              <div class="input-group mb-3">
-                <input id="NewDeviceLocationInput" type="text" class="form-control" placeholder="Location (Left/Right)" aria-label="Location" value="">
+                <div class="col-6">
+                  <label>Device Location</label>
+                  <div class="input-group mb-3">
+                    <input id="NewDeviceLocationInput" type="text" class="form-control" placeholder="Location (Left/Right)" aria-label="Location" value="">
+                  </div>
+                </div>
               </div>
             </form>
             <form action="#" class="form-control dropzone-form" id="dropzoneupload">
@@ -356,8 +355,7 @@ async function createPatientInfo()
   formData.append("StudyID", document.getElementById("PatientFirstNameInput").value);
   formData.append("StudyName", document.getElementById("PatientLastNameInput").value);
   formData.append("Diagnosis", document.getElementById("PatientDiagnosisInput").value);
-  formData.append("saveDeviceID", document.getElementById("DeviceSerialNumberInput").value);
-  formData.append("newDeviceName", document.getElementById("NewDeviceNameInput").value);
+  formData.append("saveDeviceID", document.getElementById("NewDeviceNameInput").value);
   formData.append("newDeviceLocation", document.getElementById("NewDeviceLocationInput").value);
   const response = await fetch(window.location.origin + "/patients/new", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
   if (response.status == 200)

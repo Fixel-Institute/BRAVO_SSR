@@ -18,5 +18,5 @@ from django.urls import include, path
 
 urlpatterns = [
     path('', include('PerceptDashboard.urls')),
-    path('documentation', include('documentation.urls')),
+    path('documentation/', include('documentation.urls')),
 ]

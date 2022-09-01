@@ -31,6 +31,9 @@
       <div class="text-center">
         <button type="button" class="btn bg-gradient-dark w-100 mt-2 mb-4" onclick="window.location.href='/signup'">Sign up</button>
       </div>
+      <div class="text-center">
+        <button type="button" class="btn bg-gradient-info w-100 mt-2 mb-4" onclick="submitDemoAuthentication()">Access Demo Account</button>
+      </div>
     </form>
   </div>
 </div>
@@ -50,6 +53,26 @@ async function submitAuthentication() {
   var formData = new FormData()
   formData.append("Email", document.getElementById("emailForm").value)
   formData.append("Password", document.getElementById("passwordForm").value)
+
+  response = await fetch(window.location.origin + "/signin", {method: "POST", body: formData, headers: {'X-CSRFToken': csrftoken}, })
+  if (response.status != 200)
+  {
+    try {
+      data = await response.json()
+      showNotification(data["type"], "top", "right", data["message"], 5000)
+    } catch (e) {
+      console.log(e)
+    }
+  }
+  else
+  {
+    window.location.href = window.location.origin + "/index"
+  }
+}
+
+async function submitDemoAuthentication() {
+  var formData = new FormData()
+  formData.append("Email", "RequestDemoAccess")
 
   response = await fetch(window.location.origin + "/signin", {method: "POST", body: formData, headers: {'X-CSRFToken': csrftoken}, })
   if (response.status != 200)

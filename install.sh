@@ -5,11 +5,11 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 sudo apt-get update
 sudo apt-get install python3-pip libjpeg-dev libjpeg8-dev libpng-dev apache2 libapache2-mod-wsgi-py3 python3-virtualenv libmysqlclient-dev mysql-server
 
-virtualenv $SCRIPT_DIR/PerceptPlatformEnv
-source $SCRIPT_DIR/PerceptPlatformEnv/bin/activate
+virtualenv $SCRIPT_DIR/venv
+source $SCRIPT_DIR/venv/bin/activate
 pip3 install django djangorestframework numpy scipy pandas spectrum mysqlclient requests websocket-client joblib cryptography
 
-ADMIN_EMAIL='Admin@PerceptPlatform.demo'
+ADMIN_EMAIL='Admin@BRAVO.demo'
 ADMIN_PASSWORD=`cat /dev/urandom | tr -dc '[:alpha:]' | fold -w ${1:-20} | head -n 1`
 DATASERVER_PATH='/home/ubuntu/Storage/'
 SERVER_ADDRESS='0.0.0.0'
@@ -17,7 +17,7 @@ SERVER_ADDRESS='0.0.0.0'
 export SECRET_KEY=$SECRET_KEY
 
 # Ask User for Admin Email Address
-read -p "Please Enter Admin Email Address [default: 'Admin@PerceptPlatform.demo']: " userInput
+read -p "Please Enter Admin Email Address [default: 'Admin@BRAVO.demo']: " userInput
 [ ! -z "$userInput" ] && ADMIN_EMAIL=$userInput
 
 # Ask User for Admin Email Address

@@ -35,6 +35,7 @@ def extractUserInfo(user):
     userInfo["Institute"] = user.institute
     userInfo["Clinician"] = user.is_clinician
     userInfo["Admin"] = user.is_admin
+    userInfo["Demo"] = user.email == "Demo@bravo.edu"
     return userInfo
 
 def retrieveProcessingSettings(config=dict()):
@@ -840,7 +841,10 @@ def extractPatientTableRow(user, patient):
             device = models.PerceptDevice.objects.filter(deidentified_id=id).first()
             device.serial_number = id
 
-        daysSinceImplant = np.round((datetime.now(tz=pytz.utc) - device.implant_date).total_seconds() / (3600*24))
+        if not (user.is_admin or user.is_clinician):
+            daysSinceImplant = 0
+        else:
+            daysSinceImplant = np.round((datetime.now(tz=pytz.utc) - device.implant_date).total_seconds() / (3600*24))
         if device.device_name == "":
             deviceName = device.getDeviceSerialNumber(key)
         else:
@@ -1796,7 +1800,7 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
                 contacts, hemisphere = Percept.reformatChannelName(channel)
                 for lead in leads:
                     if lead["TargetLocation"].startswith(hemisphere):
-                        data["Channels"].append({"Hemisphere": lead["TargetLocation"], "Contacts": contacts})
+                        data["Channels"].append({"Hemisphere": lead["TargetLocation"], "Contacts": contacts, "Type": lead["ElectrodeType"]})
                         if lead["ElectrodeType"].startswith("SenSight"):
                             data["ContactTypes"].append(["Ring","Segment A","Segment B","Segment C","Segment AB","Segment BC","Segment AC"])
                         else:
@@ -2163,7 +2167,7 @@ def viewSession(user, patient_id, session_id, authority):
     for device in availableDevices:
         if models.PerceptSession.objects.filter(device_deidentified_id=device.deidentified_id, deidentified_id=str(session_id)).exists():
             session = models.PerceptSession.objects.filter(deidentified_id=session_id).first()
-            JSON = Percept.decodeJSON(session.session_file_path)
+            JSON = Percept.decodeEncryptedJSON(session.session_file_path, key)
             Overview = processSessionFile(JSON)
 
             if not user.is_clinician:

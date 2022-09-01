@@ -912,7 +912,10 @@ def queryTherapyHistory(user, patientUniqueID, authority):
     for device in availableDevices:
         TherapyChangeData = dict()
         TherapyChangeData["device"] = device.deidentified_id
-        TherapyChangeData["device_name"] = device.getDeviceSerialNumber(key)
+        if device.device_name == "":
+            TherapyChangeData["device_name"] = device.getDeviceSerialNumber(key)
+        else:
+            TherapyChangeData["device_name"] = device.device_name
         TherapyChangeHistory = models.TherapyChangeLog.objects.filter(device_deidentified_id=device.deidentified_id).order_by("date_of_change").all()
         if len(TherapyChangeHistory) > 0:
             TherapyChangeHistory = pd.DataFrame.from_records(TherapyChangeHistory.values("date_of_change", "previous_group", "new_group"))

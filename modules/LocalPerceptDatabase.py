@@ -1770,7 +1770,10 @@ def queryRealtimeStreamOverview(user, patientUniqueID, authority):
                 continue
 
             data["RecordingID"] = recording.recording_id
-            data["DeviceName"] = device.getDeviceSerialNumber(key)
+            if device.device_name == "":
+                data["DeviceName"] = device.getDeviceSerialNumber(key)
+            else:
+                data["DeviceName"] = device.device_name
             data["DeviceID"] = device.deidentified_id
             data["DeviceLocation"] = device.device_location
             data["Channels"] = list()

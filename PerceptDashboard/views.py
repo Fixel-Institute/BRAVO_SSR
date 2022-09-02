@@ -17,7 +17,7 @@ from PythonUtility import *
 from . import models
 
 key = os.environ.get('ENCRYPTION_KEY')
-DemoAccount = "Demo@bravo.edu_test"
+DemoAccount = "Demo@bravo.edu"
 
 def index(request):
     return redirect("patients")

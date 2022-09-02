@@ -15,7 +15,7 @@ import pandas as pd
 from cryptography.fernet import Fernet
 import hashlib
 
-from scipy import signal, stats, optimize, interpolate
+from scipy import signal, stats, optimize, interpolate, ndimage
 import matplotlib.pyplot as plt
 
 import Percept
@@ -44,13 +44,13 @@ def retrieveProcessingSettings(config=dict()):
             "SpectrogramMethod": {
                 "name": "Time-Frequency Analysis Algorithm",
                 "description": "",
-                "options": ["Welch","Spectrogram","Wavelet"],
+                "options": ["Spectrogram","Wavelet"],
                 "value": "Spectrogram"
             },
             "PSDMethod": {
                 "name": "Stimulation Epoch Power Spectrum Algorithm",
                 "description": "",
-                "options": ["Welch","Time-Frequency Analysis"],
+                "options": ["Time-Frequency Analysis"],
                 "value": "Welch"
             },
             "NormalizedPSD": {
@@ -1897,10 +1897,17 @@ def processRealtimeStreamRenderingData(stream, options=dict()):
             data[channel]["Spectrogram"]["Power"] = np.log10(data[channel]["Spectrogram"]["Power"])*10
             data[channel]["Spectrogram"]["ColorRange"] = [-10,20]
 
+        if options["NormalizedPSD"]["value"] == "true":
+            data[channel]["Spectrogram"]["Power"] = SPU.normalizeSpectrogram(data[channel]["Spectrogram"]["Power"], data[channel]["Spectrogram"]["Power"][10,:] > -100, axis=1, log=True)
+            if options["SpectrogramMethod"]["value"] == "Spectrogram":
+                data[channel]["Spectrogram"]["Power"] = ndimage.uniform_filter(data[channel]["Spectrogram"]["Power"], size=5)
+            data[channel]["Spectrogram"]["ColorRange"] = [-10,10]
+
         if options["PSDMethod"]["value"] == "Time-Frequency Analysis":
             data[channel]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, channel, method=options["SpectrogramMethod"]["value"], stim_label="Ipsilateral")
         else:
             data[channel]["StimPSD"] = processRealtimeStreamStimulationPSD(stream, channel, method=options["PSDMethod"]["value"], stim_label="Ipsilateral")
+
 
     return data
 

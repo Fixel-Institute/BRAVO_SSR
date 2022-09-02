@@ -223,6 +223,11 @@ let myDropzone = new Dropzone("#dropzoneupload", {
 var files = [];
 $(document).ready(function() {
   document.getElementById('patientListNav').classList.add("active")
+  {% if User.Demo %}
+    Swal.fire('NOTICE', `You are currently viewing the Demo Account. This account granted basic access to sample data for viewing and downloading. 
+    However, much functions are limited: 1) <b>You cannot upload new data</b>, and 2) <b>You cannot modify existing records</b>. 
+    Please refer to the original source code to setup your own server to access full capabilitiy of this platform.`, 'info')
+  {% endif %}
 })
 
 function uploadNewFile()

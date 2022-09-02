@@ -568,6 +568,7 @@ class RealtimeStreamView(RestViews.APIView):
                 return Response(status=403)
 
             elif Authority["Level"] == 1:
+                Authority["Permission"] = database.verifyPermission(request.user, request.data["requestData"], Authority, "BrainSenseStream")
                 deidentification = database.extractPatientInfo(request.user, request.session["patient_deidentified_id"])
                 DeviceIDs = [deidentification["Devices"][i]["ID"] for i in range(len(deidentification["Devices"]))]
                 if not request.data["requestData"] in DeviceIDs:
@@ -598,6 +599,7 @@ class RealtimeStreamView(RestViews.APIView):
                 return Response(status=403)
 
             elif Authority["Level"] == 1:
+                Authority["Permission"] = database.verifyPermission(request.user, request.session["patient_deidentified_id"], Authority, "BrainSenseStream")
                 deidentification = database.extractPatientInfo(request.user, request.session["patient_deidentified_id"])
                 DeviceIDs = [deidentification["Devices"][i]["ID"] for i in range(len(deidentification["Devices"]))]
                 if not request.data["device"] in DeviceIDs:

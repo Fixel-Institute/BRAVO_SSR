@@ -427,7 +427,7 @@ async function requestRealtimeStreamData(timestamp, device)
       streamData[device][timestamp]["Data"] = data
       streamData["CurrentID"] = streamData[device][timestamp]["ID"]
       document.getElementById("BrainSenseStimulationPSDRefSwitch-Left").checked = false
-      document.getElementById("BrainSenseStimulationPSDRefSwitch-Left").checked = false
+      document.getElementById("BrainSenseStimulationPSDRefSwitch-Right").checked = false
 
       if (data["Info"]["CardiacFilter"]) document.getElementById("CardiacFilterState").innerHTML = "Remove Cardiac Filter"
       else document.getElementById("CardiacFilterState").innerHTML = "Add Cardiac Filter"
@@ -490,7 +490,7 @@ async function updateCardiacFilterData()
     streamData[device][timestamp]["Data"] = data
     streamData["CurrentID"] = streamData[device][timestamp]["ID"]
     document.getElementById("BrainSenseStimulationPSDRefSwitch-Left").checked = false
-    document.getElementById("BrainSenseStimulationPSDRefSwitch-Left").checked = false
+    document.getElementById("BrainSenseStimulationPSDRefSwitch-Right").checked = false
 
     if (data["Info"]["CardiacFilter"]) document.getElementById("CardiacFilterState").innerHTML = "Remove Cardiac Filter"
     else document.getElementById("CardiacFilterState").innerHTML = "Add Cardiac Filter"
@@ -581,38 +581,28 @@ async function updateConfigurations()
   for (var i = 0; i < selections.length; i++) {
     formData.append(selections[i].dataset.key, selections[i].value);
   }
-  const response = await fetch(window.location.origin + "/report/brainsenseStreams", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
-  if (response.status == 200)
-  {
-    var data = await response.json()
+  fetch(window.location.origin + "/report/brainsenseStreams", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },}).then((response) => {
+    response.json().then((data) => {
+      streamData[device][timestamp]["Data"] = data
+      streamData["CurrentID"] = streamData[device][timestamp]["ID"]
+      document.getElementById("BrainSenseStimulationPSDRefSwitch-Left").checked = false
+      document.getElementById("BrainSenseStimulationPSDRefSwitch-Left").checked = false
 
-    streamData = {}
-    var selectList = document.getElementById('BrainSenseStreamSelection')
-    displayRealtimeStreamCards(selectList.value)
+      if (document.getElementById("TimeFrequencyMethod").innerHTML == "Use Wavelet") {
+        document.getElementById("TimeFrequencyMethod").innerHTML = "Use Spectrogram"
+      } else {
+        document.getElementById("TimeFrequencyMethod").innerHTML = "Use Wavelet"
+      }
 
-    streamData[device][timestamp]["Data"] = data
-    streamData["CurrentID"] = streamData[device][timestamp]["ID"]
-    document.getElementById("BrainSenseStimulationPSDRefSwitch-Left").checked = false
-    document.getElementById("BrainSenseStimulationPSDRefSwitch-Left").checked = false
-
-    document.getElementById("BrainSenseStreamSpectrogramCard").style.display = ""
-    Swal.fire({
-      title: 'Rendering Data',
-      html: 'Please wait while data are being rendered',
-      didOpen: () => {
-        Swal.showLoading()
-      },
-      showConfirmButton: false
+      plotly_renderBrainSenseData(device, timestamp)
+      plotly_renderStimulationPSDData(device, timestamp)
+      plotly_renderTherapyEffects(device, timestamp)
+      Swal.close()
     })
-    plotly_renderBrainSenseData(device, timestamp)
-    plotly_renderStimulationPSDData(device, timestamp)
-    plotly_renderTherapyEffects(device, timestamp)
-    Swal.close()
-  }
-  else
-  {
-    Swal.close()
-  }
+  }).catch((error) => {
+    console.log(error);
+    Swal.close();
+  })
 }
 
 async function updateStimulationPSD(side)
@@ -936,7 +926,7 @@ function plotly_renderBrainSenseData(deviceID, timestamp)
         colorbar: {y: 0.42, len: 0.4, title: {text: "Powerr (dB)", side: "right", font: {size: 15}}},
         showscale: true,
         colorscale: "Jet",
-        cmin: -20, cmax: 20,
+        cmin: data[data["Channels"][0]]["Spectrogram"]["ColorRange"][0], cmax: data[data["Channels"][0]]["Spectrogram"]["ColorRange"][1],
       },
       legend: {
         yanchor: "top",

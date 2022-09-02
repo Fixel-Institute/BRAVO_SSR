@@ -11,12 +11,14 @@ import datetime, pytz
 import Percept
 import random, string
 import copy
+import os, sys
 
 from PythonUtility import *
-
 from . import models
 
-# Create your views here.
+key = os.environ.get('ENCRYPTION_KEY')
+DemoAccount = "Demo@bravo.edu_test"
+
 def index(request):
     return redirect("patients")
 
@@ -150,7 +152,7 @@ class PatientSessionFiles(RestViews.APIView):
             return Response(status=404)
 
         if "session_id" in request.data and "deleteSession" in request.data:
-            if request.user.email == "Demo@bravo.edu":
+            if request.user.email == DemoAccount:
                 return Response(status=404)
 
             Authority = {}
@@ -222,12 +224,12 @@ class PatientInformationUpdate(RestViews.APIView):
         if not request.user.is_authenticated:
             return Response(status=404)
 
-        if request.user.email == "Demo@bravo.edu":
+        if request.user.email == DemoAccount:
             return Response(status=404)
 
         if "createNewPatientInfo" in request.data:
             if "StudyID" in request.data and "StudyName" in request.data and "Diagnosis" in request.data and "saveDeviceID" in request.data:
-                if request.data["StudyName"] == "" or request.data["StudyID"] == "" or request.data["saveDeviceID"] == "":
+                if request.data["StudyName"] == "" or request.data["StudyID"] == "":
                     return Response(status=400)
                 data = dict()
                 
@@ -269,7 +271,8 @@ class PatientInformationUpdate(RestViews.APIView):
 
             patient = models.Patient.objects.get(deidentified_id=request.data["updatePatientInfo"])
             if "saveDeviceID" in request.data and not request.user.is_clinician:
-                device = models.PerceptDevice(patient_deidentified_id=patient.deidentified_id, serial_number=request.data["saveDeviceID"], device_name=request.data["newDeviceName"], device_location=request.data["newDeviceLocation"])
+                serial_number = "".join(random.choices(string.ascii_uppercase + string.digits, k=32))
+                device = models.PerceptDevice(patient_deidentified_id=patient.deidentified_id, serial_number=serial_number, device_name=request.data["saveDeviceID"], device_location=request.data["newDeviceLocation"])
                 device.device_eol_date = datetime.datetime.fromtimestamp(0, tz=pytz.utc)
                 device.authority_level = "Research"
                 device.authority_user = request.user.email
@@ -313,10 +316,10 @@ class PatientInformationUpdate(RestViews.APIView):
                     return Response(status=200)
 
             elif "FirstName" in request.data:
-                patient.first_name = request.data["FirstName"]
-                patient.last_name = request.data["LastName"]
+                patient.setPatientFirstName(request.data["FirstName"], key)
+                patient.setPatientLastName(request.data["LastName"], key)
                 patient.diagnosis = request.data["Diagnosis"]
-                patient.medical_record_number = request.data["MRN"]
+                patient.setPatientMRN(request.data["MRN"], key)
                 patient.save()
                 return Response(status=200)
 
@@ -421,7 +424,7 @@ class ResolveTherapyHistoryConflicts(RestViews.APIView):
         if not request.user.is_authenticated:
             return Response(status=404)
 
-        if request.user.email == "Demo@bravo.edu":
+        if request.user.email == DemoAccount:
             return Response(status=404)
 
         if "removeTherapyLog" in request.data:
@@ -1043,7 +1046,7 @@ class SessionUpload(RestViews.APIView):
         if not "file" in request.data:
             return Response(status=404)
 
-        if request.user.email == "Demo@bravo.edu":
+        if request.user.email == DemoAccount:
             return Response(status=404)
 
         rawBytes = request.data["file"].read()

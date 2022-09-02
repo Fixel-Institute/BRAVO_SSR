@@ -35,7 +35,6 @@
               </p>
             </div>
           </div>
-          {% if not Patient.Devices.1 %}
           {% if not User.Clinician and User.Permission == 1 %}
           <div class="col-lg-2 col-md-3 my-sm-auto ms-sm-auto me-sm-0 mx-auto mt-4">
             <div class="nav-wrapper position-relative end-0">
@@ -44,7 +43,6 @@
               </button>
             </div>
           </div>
-          {% endif %}
           {% endif %}
           <div class="col-lg-2 col-md-3 my-sm-auto ms-sm-auto me-sm-0 mx-auto mt-4">
             <div class="nav-wrapper position-relative end-0">
@@ -137,7 +135,7 @@
                     <input type="file" id="fileInput" onchange="requestPUTFile()" style="display: None" multiple/>
                     {% endif %}
                     <div class="my-auto mx-auto">
-                      <button class="btn btn-info btn-sm mb-0" data-bs-toggle="modal" data-bs-target="#DeviceNameUpdate" onclick="selectDeviceForUpdate('{{device.ID}}')"> Edit </button>
+                      <button class="btn btn-info btn-sm mb-0" data-bs-toggle="modal" data-bs-target="#DeviceNameUpdate" onclick="selectDeviceForUpdate('{{device.DeviceName}}', '{{device.ID}}')"> Edit </button>
                     </div>
                   </div>
                 </td>
@@ -219,6 +217,20 @@
         <h6 class="text-center mb-0">Chronic LFP</h6>
         <hr class="horizontal dark my-3">
         <button type="button" class="btn btn-primary btn-sm mb-0" onclick="javascript:window.location.href=window.location.origin+'/report/chronicLFPs'">View Analysis</button>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-2 col-4">
+    <div class="card">
+      <div class="card-header mx-4 p-3 text-center">
+        <div class="icon icon-shape icon-lg bg-gradient-primary shadow text-center border-radius-lg">
+          <i class="fa-solid fa-scroll opacity-10" aria-hidden="true"></i>
+        </div>
+      </div>
+      <div class="card-body pt-0 p-3 text-center">
+        <h6 class="text-center mb-0">Session Summary</h6>
+        <hr class="horizontal dark my-3">
+        <button type="button" class="btn btn-primary btn-sm mb-0" onclick="javascript:window.location.href=window.location.origin+'/report/sessionsManagement'">View Reports</button>
       </div>
     </div>
   </div>
@@ -331,24 +343,20 @@
             <form role="form text-start">
               <div class="row">
                 <div class="col-6">
-                  <label>Device Serial Number</label>
+                  <label>Device Display Name</label>
                   <div class="input-group mb-3">
-                    <input id="DeviceSerialNumberInput" type="text" class="form-control" placeholder="Serial Number" aria-label="Device Serial Number" value="">
+                    <input id="NewDeviceNameInput" type="text" class="form-control" placeholder="(e.g. Device 01)" aria-label="Device Name" value="">
                   </div>
                 </div>
                 <div class="col-6">
-                  <label>Device Name</label>
+                  <label>Device Location</label>
                   <div class="input-group mb-3">
-                    <input id="NewDeviceNameInput" type="text" class="form-control" placeholder="Display Name" aria-label="Device Name" value="">
+                    <input id="NewDeviceLocationInput" type="text" class="form-control" placeholder="Location (Left/Right)" aria-label="Location" value="">
                   </div>
                 </div>
               </div>
-              <label>Device Location</label>
-              <div class="input-group mb-3">
-                <input id="NewDeviceLocationInput" type="text" class="form-control" placeholder="Location (Left/Right)" aria-label="Location" value="">
-              </div>
               <div class="text-center">
-                <button type="button" class="btn bg-gradient-info mt-4 mb-0" onclick="saveNewDevice()">Save</button>
+                <button type="button" class="btn bg-gradient-info mt-4 mb-0" onclick="saveNewDevice()">Add</button>
               </div>
             </form>
           </div>
@@ -393,8 +401,9 @@ async function updatePatientInfo()
   }
 }
 
-function selectDeviceForUpdate(deviceID)
+function selectDeviceForUpdate(deviceName, deviceID)
 {
+  document.getElementById("deviceNameInput").value = deviceName;
   document.getElementById("deviceNameInput").dataset.deviceid = deviceID
 }
 
@@ -459,13 +468,11 @@ async function saveNewDevice()
 {
   let formData = new FormData();
   formData.append("updatePatientInfo", '{{PatientID}}');
-  formData.append("saveDeviceID", document.getElementById("DeviceSerialNumberInput").value);
-  formData.append("newDeviceName", document.getElementById("NewDeviceNameInput").value);
+  formData.append("saveDeviceID", document.getElementById("NewDeviceNameInput").value);
   formData.append("newDeviceLocation", document.getElementById("NewDeviceLocationInput").value);
   const response = await fetch(window.location.origin + "/patientOverview/update", {method: "POST", body: formData, headers: { 'X-CSRFToken': csrftoken },})
   if (response.status == 200)
   {
-    document.getElementById("DeviceSerialNumberInput").value = ""
     document.getElementById("NewDeviceNameInput").value = ""
     document.getElementById("NewDeviceLocationInput").value = ""
     window.location.reload();

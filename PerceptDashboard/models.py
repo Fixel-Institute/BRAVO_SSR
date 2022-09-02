@@ -87,13 +87,25 @@ class Patient(models.Model):
         secureEncoder = Fernet(key)
         return secureEncoder.decrypt(self.first_name.encode("utf-8")).decode("utf-8")
 
+    def setPatientFirstName(self, first_name, key):
+        secureEncoder = Fernet(key)
+        self.first_name = secureEncoder.encrypt(first_name.encode('utf_8')).decode("utf-8")
+
     def getPatientLastName(self, key):
         secureEncoder = Fernet(key)
         return secureEncoder.decrypt(self.last_name.encode("utf-8")).decode("utf-8")
 
+    def setPatientLastName(self, last_name, key):
+        secureEncoder = Fernet(key)
+        self.last_name = secureEncoder.encrypt(last_name.encode('utf_8')).decode("utf-8")
+
     def getPatientMRN(self, key):
         secureEncoder = Fernet(key)
         return secureEncoder.decrypt(self.medical_record_number.encode("utf-8")).decode("utf-8")
+
+    def setPatientMRN(self, mrn, key):
+        secureEncoder = Fernet(key)
+        self.medical_record_number = secureEncoder.encrypt(mrn.encode("utf-8")).decode("utf-8")
 
     def addDevice(self, deviceID):
         if not deviceID in self.device_deidentified_id:

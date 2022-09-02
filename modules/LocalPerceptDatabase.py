@@ -82,14 +82,14 @@ def colorTextFromCmap(color):
 
 def retrievePatientInformation(PatientInformation, Institute, encoder=None):
     if not encoder:
-        encoder = secureEncoder = Fernet(key)
+        encoder = Fernet(key)
         
-    FirstName = encoder.encrypt(PatientInformation["PatientFirstName"].capitalize().encode('utf_8')).decode("utf-8")
-    LastName = encoder.encrypt(PatientInformation["PatientLastName"].capitalize().encode('utf_8')).decode("utf-8")
+    FirstName = encoder.encrypt(PatientInformation["PatientFirstName"].encode('utf_8')).decode("utf-8")
+    LastName = encoder.encrypt(PatientInformation["PatientLastName"].encode('utf_8')).decode("utf-8")
     Diagnosis = PatientInformation["Diagnosis"].replace("DiagnosisTypeDef.","")
     MRN = encoder.encrypt(PatientInformation["PatientId"].encode('utf_8')).decode("utf-8")
 
-    hashfield = hashlib.sha256((PatientInformation["PatientFirstName"].capitalize() + " " + PatientInformation["PatientLastName"].capitalize()).encode("utf-8")).hexdigest()
+    hashfield = hashlib.sha256((PatientInformation["PatientFirstName"] + " " + PatientInformation["PatientLastName"]).encode("utf-8")).hexdigest()
 
     try:
         PatientDateOfBirth = datetime.fromisoformat(PatientInformation["PatientDateOfBirth"][:-1]+"+00:00")
@@ -632,7 +632,19 @@ def processPerceptJSON(user, filename, rawBytes, device_deidentified_id="", proc
             NewDataFound = True
 
     if NewDataFound:
-        os.rename(DATABASE_PATH + "cache" + os.path.sep + filename, session.session_file_path)
+        #os.rename(DATABASE_PATH + "cache" + os.path.sep + filename, session.session_file_path)
+        Overview = processSessionFile(JSON)
+        if not user.is_clinician:
+            Overview["Overall"]["PatientInformation"]["PatientFirstName"] = "Deidentified FirstName"
+            Overview["Overall"]["PatientInformation"]["PatientLastName"] = "Deidentified LastName"
+            Overview["Overall"]["PatientInformation"]["Diagnosis"] = "Unknown"
+            Overview["Overall"]["PatientInformation"]["PatientId"] = "Unknown"
+            Overview["Overall"]["PatientInformation"]["PatientDateOfBirth"] = "Unknown"
+            Overview["Overall"]["DeviceInformation"]["NeurostimulatorSerialNumber"] = "Unknown"
+            Overview["Overall"]["DeviceInformation"]["ImplantDate"] = "Unknown"
+
+        with open(session.session_file_path, "w+") as file:
+            json.dump(Overview, file)
         session.save()
     else:
         os.remove(DATABASE_PATH + "cache" + os.path.sep + filename)
@@ -2177,9 +2189,14 @@ def viewSession(user, patient_id, session_id, authority):
     for device in availableDevices:
         if models.PerceptSession.objects.filter(device_deidentified_id=device.deidentified_id, deidentified_id=str(session_id)).exists():
             session = models.PerceptSession.objects.filter(deidentified_id=session_id).first()
-            JSON = Percept.decodeEncryptedJSON(session.session_file_path, key)
-            Overview = processSessionFile(JSON)
-
+            
+            try: 
+                JSON = Percept.decodeEncryptedJSON(session.session_file_path, key)
+                Overview = processSessionFile(JSON)
+            except Exception:
+                with open(session.session_file_path, "r") as file:
+                    Overview = json.load(file)
+                
             if not user.is_clinician:
                 Overview["Overall"]["PatientInformation"]["PatientFirstName"] = "Deidentified FirstName"
                 Overview["Overall"]["PatientInformation"]["PatientLastName"] = "Deidentified LastName"
@@ -2187,5 +2204,7 @@ def viewSession(user, patient_id, session_id, authority):
                 Overview["Overall"]["PatientInformation"]["PatientId"] = "Unknown"
                 Overview["Overall"]["PatientInformation"]["PatientDateOfBirth"] = "Unknown"
                 Overview["Overall"]["DeviceInformation"]["NeurostimulatorSerialNumber"] = "Unknown"
+                Overview["Overall"]["DeviceInformation"]["ImplantDate"] = "Unknown"
+                
             return Overview
     return {}

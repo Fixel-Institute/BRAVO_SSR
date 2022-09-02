@@ -165,7 +165,7 @@
             <h3 class="font-weight-bold mb-1">New Patient Information</h3>
             <p class="mb-0">Edit desired fields and click create</p>
             {% if User.Demo %}
-              <p class="mb-0"><b>(* Demo Account cannot upload data )</b></p>
+              <p class="mb-0"><b>(* This Demo account cannot upload data )</b></p>
             {% endif %}
           </div>
           <div class="card-body">
@@ -191,9 +191,9 @@
 
               <div class="row">
                 <div class="col-6">
-                  <label>Device Name (*required for uploading data)</label>
+                  <label>Device Display Name</label>
                   <div class="input-group mb-3">
-                    <input id="NewDeviceNameInput" type="text" class="form-control" placeholder="Display Name" aria-label="Device Name" value="">
+                    <input id="NewDeviceNameInput" type="text" class="form-control" placeholder="Display Name (e.g. Device 01)" aria-label="Device Name" value="">
                   </div>
                 </div>
                 <div class="col-6">
@@ -208,7 +208,7 @@
               <div class="dz-message" data-dz-message><span class="text-secondary">Drop files here to upload</span></div>
             </form>
             <div class="modal-footer">
-              <button type="button" class="btn bg-gradient-info mt-4 mb-0" onclick="createPatientInfo()">Create</button>
+              <button type="button" class="btn bg-gradient-info mt-4 mb-0" onclick="finalWarning()">Create</button>
             </div>
           </div>
         </div>
@@ -348,6 +348,20 @@ async function viewPatientOverview(id)
 }
 
 {% if not User.Clinician %}
+function finalWarning() {
+  Swal.fire({
+    title: "Upload Warning",
+    text: "By confirming, you agree to abide to the law and requirement of your country and insitution regarding deidentification of patient health information. ",
+    showDenyButton: true,
+    confirmButtonText: "Yes",
+    denyButtonText: "No",
+  }).then((result) => {
+    if (result.isConfirmed) {
+      createPatientInfo();
+    }
+  })
+}
+
 async function createPatientInfo()
 {
   let formData = new FormData();

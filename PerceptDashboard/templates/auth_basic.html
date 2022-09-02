@@ -44,6 +44,12 @@
             <div class="collapse navbar-collapse w-100 pt-3 pb-2 py-lg-0" id="navigation">
               <ul class="navbar-nav navbar-nav-hover mx-auto">
               </ul>
+
+              <ul class="navbar-nav d-lg-block d-none">
+                <li class="nav-item">
+                  <a href="javascript:submitDemoAuthentication()" class="btn btn-sm bg-gradient-info  mb-0 me-1">View Demo Account</a>
+                </li>
+              </ul>
               <ul class="navbar-nav d-lg-block d-none">
                 <li class="nav-item">
                   <a href="/documentation" target="_blank" class="btn btn-sm  btn-primary  mb-0 me-1">Documentation</a>
@@ -93,6 +99,26 @@
         damping: '0.5'
       }
       Scrollbar.init(document.querySelector('#sidenav-scrollbar'), options);
+    }
+
+    async function submitDemoAuthentication() {
+      var formData = new FormData()
+      formData.append("Email", "RequestDemoAccess")
+
+      response = await fetch(window.location.origin + "/signin", {method: "POST", body: formData, headers: {'X-CSRFToken': csrftoken}, })
+      if (response.status != 200)
+      {
+        try {
+          data = await response.json()
+          showNotification(data["type"], "top", "right", data["message"], 5000)
+        } catch (e) {
+          console.log(e)
+        }
+      }
+      else
+      {
+        window.location.href = window.location.origin + "/index"
+      }
     }
   </script>
 

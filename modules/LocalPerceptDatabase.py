@@ -51,7 +51,7 @@ def retrieveProcessingSettings(config=dict()):
                 "name": "Stimulation Epoch Power Spectrum Algorithm",
                 "description": "",
                 "options": ["Time-Frequency Analysis"],
-                "value": "Welch"
+                "value": "Time-Frequency Analysis"
             },
             "NormalizedPSD": {
                 "name": "Normalize Stimulation Epoch Power Spectrum",
@@ -488,55 +488,15 @@ def processPerceptJSON(user, filename, rawBytes, device_deidentified_id="", proc
     DeviceInformation = JSON["DeviceInformation"]["Final"]
     NeurostimulatorLocation = DeviceInformation["NeurostimulatorLocation"].replace("InsLocation.","")
     ImplantDate = datetime.fromisoformat(DeviceInformation["ImplantDate"][:-1]+"+00:00")
-    LeadConfigurations = list()
-
-    LeadInformation = JSON["LeadConfiguration"]["Final"]
-    for lead in LeadInformation:
-        LeadConfiguration = dict()
-        LeadConfiguration["TargetLocation"] = lead["Hemisphere"].replace("HemisphereLocationDef.","") + " "
-        if lead["LeadLocation"] == "LeadLocationDef.Vim":
-            LeadConfiguration["TargetLocation"] += "VIM"
-        elif lead["LeadLocation"] == "LeadLocationDef.Stn":
-            LeadConfiguration["TargetLocation"] += "STN"
-        elif lead["LeadLocation"] == "LeadLocationDef.Gpi":
-            LeadConfiguration["TargetLocation"] += "GPI"
-        else:
-            LeadConfiguration["TargetLocation"] += lead["LeadLocation"].replace("LeadLocationDef.","")
-
-        if lead["ElectrodeNumber"] == "InsPort.ZERO_THREE":
-            LeadConfiguration["ElectrodeNumber"] = "E00-E03"
-        elif lead["ElectrodeNumber"] == "InsPort.ZERO_SEVEN":
-            LeadConfiguration["ElectrodeNumber"] = "E00-E07"
-        elif lead["ElectrodeNumber"] == "InsPort.EIGHT_ELEVEN":
-            LeadConfiguration["ElectrodeNumber"] = "E08-E11"
-        elif lead["ElectrodeNumber"] == "InsPort.EIGHT_FIFTEEN":
-            LeadConfiguration["ElectrodeNumber"] = "E08-E15"
-        if lead["Model"] == "LeadModelDef.LEAD_B33015":
-            LeadConfiguration["ElectrodeType"] = "SenSight B33015"
-        elif lead["Model"] == "LeadModelDef.LEAD_B33005":
-            LeadConfiguration["ElectrodeType"] = "SenSight B33005"
-        elif lead["Model"] == "LeadModelDef.LEAD_3387":
-            LeadConfiguration["ElectrodeType"] = "Medtronic 3387"
-        elif lead["Model"] == "LeadModelDef.LEAD_3389":
-            LeadConfiguration["ElectrodeType"] = "Medtronic 3389"
-        else:
-            LeadConfiguration["ElectrodeType"] = lead["Model"]
-
-        LeadConfigurations.append(LeadConfiguration)
-
     deviceID.implant_date = ImplantDate
     deviceID.device_location = NeurostimulatorLocation
-    deviceID.device_lead_configurations = LeadConfigurations
-    if "EstimatedBatteryLifeMonths" in JSON["BatteryInformation"].keys():
-        deviceID.device_eol_date = SessionDate + timedelta(days=30*JSON["BatteryInformation"]["EstimatedBatteryLifeMonths"])
-    else:
-        deviceID.device_eol_date = datetime.fromtimestamp(0, tz=pytz.utc)
-    deviceID.save()
 
     if SessionDate >= deviceID.device_last_seen:
         deviceID.device_last_seen = SessionDate
         if "EstimatedBatteryLifeMonths" in JSON["BatteryInformation"].keys():
             deviceID.device_eol_date = SessionDate + timedelta(days=30*JSON["BatteryInformation"]["EstimatedBatteryLifeMonths"])
+        else:
+            deviceID.device_eol_date = datetime.fromtimestamp(0, tz=pytz.utc)
 
         LeadConfigurations = list()
         LeadInformation = JSON["LeadConfiguration"]["Final"]
@@ -573,8 +533,8 @@ def processPerceptJSON(user, filename, rawBytes, device_deidentified_id="", proc
 
             LeadConfigurations.append(LeadConfiguration)
         deviceID.device_lead_configurations = LeadConfigurations
-        deviceID.save()
-
+    deviceID.save()
+    
     session = models.PerceptSession(device_deidentified_id=deviceID.deidentified_id, session_source_filename=filename)
     session.session_file_path = DATABASE_PATH + "sessions" + os.path.sep + str(session.device_deidentified_id)+"_"+str(session.deidentified_id)+".json"
     sessionUUID = str(session.deidentified_id)

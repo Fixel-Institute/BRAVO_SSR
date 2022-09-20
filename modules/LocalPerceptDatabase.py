@@ -530,8 +530,8 @@ def processPerceptJSON(user, filename, rawBytes, device_deidentified_id="", proc
                 LeadConfiguration["ElectrodeType"] = "Medtronic 3389"
             else:
                 LeadConfiguration["ElectrodeType"] = lead["Model"]
-
             LeadConfigurations.append(LeadConfiguration)
+            
         deviceID.device_lead_configurations = LeadConfigurations
     deviceID.save()
     

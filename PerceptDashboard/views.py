@@ -248,6 +248,7 @@ class PatientInformationUpdate(RestViews.APIView):
                     serial_number = "".join(random.choices(string.ascii_uppercase + string.digits, k=32))
                     device = models.PerceptDevice(patient_deidentified_id=patient.deidentified_id, serial_number=serial_number, device_name=request.data["saveDeviceID"], device_location=request.data["newDeviceLocation"])
                     device.device_eol_date = datetime.datetime.fromtimestamp(0, tz=pytz.utc)
+                    device.device_last_seen = datetime.datetime.fromtimestamp(0, tz=pytz.utc)
                     device.authority_level = "Research"
                     device.authority_user = request.user.email
                     device.save()

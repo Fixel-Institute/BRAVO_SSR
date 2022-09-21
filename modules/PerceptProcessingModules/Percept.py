@@ -513,7 +513,6 @@ def checkMissingPackage(Data):
                     if not ChangesInMs[missingIndex-1] % TimePerPacket == 0:
                         print(f"TicksInMs Reversed for {nStream}")
                         #raise Exception("Time Skip is not full package drop")
-                        # Pretend for 
                         
                     numMissingPacket = int(ChangesInMs[missingIndex-1] / TimePerPacket - 1)
                     insertionIndex = np.where(TDSequences < missingIndex)[0][-1] + 1
@@ -912,7 +911,7 @@ def processTherapySettings(TherapyGroup):
                                                                     TherapyGroup["ProgramSettings"][hemisphere]["UpperLimitInMilliAmps"]]
             else:
                 Therapy[hemisphere]["AmplitudeThreshold"] = [0,0]
-                
+            
             Therapy[hemisphere]["SensingSetup"] = TherapyGroup["ProgramSettings"]["SensingChannel"][side]["SensingSetup"]
             if "ChannelSignalResult" in Therapy[hemisphere]["SensingSetup"].keys():
                 del(Therapy[hemisphere]["SensingSetup"]["ChannelSignalResult"])
@@ -1006,6 +1005,11 @@ def processTherapySettings(TherapyGroup):
                 Therapy["RightHemisphere"]["Unit"] = "V"
             Therapy["RightHemisphere"]["Channel"] = TherapyGroup["ProgramSettings"]["RightHemisphere"]["Programs"][0]["ElectrodeState"]
     
+    if "GroupSettings" in TherapyGroup.keys():
+        Therapy["GroupSettings"] = TherapyGroup["GroupSettings"]
+    else:
+        Therapy["GroupSettings"] = {}
+                
     return Therapy
 
 def extractTherapySettings(JSON, sourceData=dict()):

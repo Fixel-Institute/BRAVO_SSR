@@ -511,8 +511,9 @@ def checkMissingPackage(Data):
             if len(MissingPacket) > 0:
                 for missingIndex in MissingPacket:
                     if not ChangesInMs[missingIndex-1] % TimePerPacket == 0:
-                        print("TicksInMs Reversed")
-                        raise Exception("Time Skip is not full package drop")
+                        print(f"TicksInMs Reversed for {nStream}")
+                        #raise Exception("Time Skip is not full package drop")
+                        # Pretend for 
                         
                     numMissingPacket = int(ChangesInMs[missingIndex-1] / TimePerPacket - 1)
                     insertionIndex = np.where(TDSequences < missingIndex)[0][-1] + 1

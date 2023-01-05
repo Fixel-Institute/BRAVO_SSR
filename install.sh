@@ -39,21 +39,23 @@ export PERCEPT_DIR="$SCRIPT_DIR/modules/PerceptProcessingModules"
 export STATIC_ROOT="$SCRIPT_DIR/PerceptServer_Pro/static"
 export DATASERVER_PATH=$DATASERVER_PATH
 export SERVER_ADDRESS=$SERVER_ADDRESS
+export ENCRPYTION_KEY=$(python3 $SCRIPT_DIR/manage.py EncryptionKey)
 sed -i "14 i os.environ[\"PERCEPT_DIR\"] = \"$PERCEPT_DIR\"" "$SCRIPT_DIR/PerceptServer_Pro/wsgi_production.py"
 sed -i "15 i os.environ[\"STATIC_ROOT\"] = \"$STATIC_ROOT\"" "$SCRIPT_DIR/PerceptServer_Pro/wsgi_production.py"
 sed -i "16 i os.environ[\"SECRET_KEY\"] = \"$SECRET_KEY\"" "$SCRIPT_DIR/PerceptServer_Pro/wsgi_production.py"
 sed -i "17 i os.environ[\"SERVER_ADDRESS\"] = \"$SERVER_ADDRESS\"" "$SCRIPT_DIR/PerceptServer_Pro/wsgi_production.py"
-sed -i "17 i os.environ[\"DATASERVER_PATH\"] = \"$DATASERVER_PATH\"" "$SCRIPT_DIR/PerceptServer_Pro/wsgi_production.py"
+sed -i "18 i os.environ[\"DATASERVER_PATH\"] = \"$DATASERVER_PATH\"" "$SCRIPT_DIR/PerceptServer_Pro/wsgi_production.py"
+sed -i "19 i os.environ[\"ENCRPYTION_KEY\"] = \"$ENCRPYTION_KEY\"" "$SCRIPT_DIR/PerceptServer_Pro/wsgi_production.py"
 
 # Create Apache2 Configuration
 cp $SCRIPT_DIR/perceptplatform.conf $SCRIPT_DIR/perceptplatform_production.conf
 sed -i "s#%{DOCUMENTROOT}#$SCRIPT_DIR#g" $SCRIPT_DIR/perceptplatform_production.conf
 sed -i "s#%{ADMIN_NAME}#$ADMIN_EMAIL#g" $SCRIPT_DIR/perceptplatform_production.conf
 sed -i "s#%{SERVER_NAME}#$SERVER_ADDRESS#g" $SCRIPT_DIR/perceptplatform_production.conf
-cp $SCRIPT_DIR/perceptplatform_production.conf /etc/apache2/sites-available/perceptplatform.conf
-a2dissite 000-default.conf
-a2ensite perceptplatform.conf
-systemctl reload apache2
+sudo cp $SCRIPT_DIR/perceptplatform_production.conf /etc/apache2/sites-available/perceptplatform.conf
+sudo a2dissite 000-default.conf
+sudo a2ensite perceptplatform.conf
+sudo systemctl reload apache2
 
 python3 $SCRIPT_DIR/manage.py makemigrations PerceptDashboard
 python3 $SCRIPT_DIR/manage.py migrate

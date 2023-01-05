@@ -20,4 +20,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if sys.argv[1] == "EncryptionKey":
+        from cryptography import fernet
+        print(fernet.Fernet.generate_key().decode("utf-8"))
+    else:
+        main()

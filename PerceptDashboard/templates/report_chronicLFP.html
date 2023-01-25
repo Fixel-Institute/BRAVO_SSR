@@ -204,7 +204,7 @@ async function populateCircadianRhythmSelector(data)
   }
   if (selector.children.length > 0) {
     document.getElementById("CircadianPowerCard").style.display = ""
-    if (data[0]["HemisphereName"]) plotly_renderCircadianRhythm(data[0]["HemisphereName"], data[0]["CircadianPowers"][0]["Therapy"])
+    if (data[0]["CircadianPowers"]) plotly_renderCircadianRhythm(data[0]["HemisphereName"], data[0]["CircadianPowers"][0]["Therapy"])
   }
 }
 
@@ -227,7 +227,7 @@ async function populateEventLockedPowerSelector(data)
   }
   if (selector.children.length > 0) {
     document.getElementById("EventLockedPowerCard").style.display = ""
-    if (data[0]["HemisphereName"]) plotly_renderEventLockedPower(data[0]["HemisphereName"], data[0]["CircadianPowers"][0]["Therapy"])
+    if (data[0]["CircadianPowers"]) plotly_renderEventLockedPower(data[0]["HemisphereName"], data[0]["CircadianPowers"][0]["Therapy"])
   }
 }
 
@@ -248,7 +248,7 @@ async function populateTherapyPowerAmplitudeSelector(data)
   }
   if (selector.children.length > 0) {
     document.getElementById("TherapyPowerAmplitudeCard").style.display = ""
-    if (data[0]["HemisphereName"]) plotly_renderTherapyPowerAmplitude(data[0]["HemisphereName"], data[0]["TherapyAmplitudes"][0]["Therapy"])
+    if (data[0]["TherapyAmplitudes"]) plotly_renderTherapyPowerAmplitude(data[0]["HemisphereName"], data[0]["TherapyAmplitudes"][0]["Therapy"])
   }
 }
 

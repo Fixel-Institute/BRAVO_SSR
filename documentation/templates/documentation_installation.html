@@ -5,7 +5,7 @@
 <article class="docs-article active" id="section-introduction">
   <header class="docs-header">
     <h1 class="docs-heading"> Introduction
-      <span class="docs-time">Last updated: 2021-11-25</span>
+      <span class="docs-time">Last updated: 2023-03-22</span>
     </h1>
     <section class="docs-intro">
       <p>
@@ -51,6 +51,18 @@
       It is also noted that the default Python distribution on Ubuntu 18.04 is Python 3.6, therefore not satisfying the requirement. 
       You need to either manually update the Python distribution so that <code>python3 --version</code> is up-to-date or use Ubuntu 20.04 LTS, which comes with Python 3.8.
     </p>
+    <p>
+      <b>2. MySQL Server</b>
+    </p> 
+    <p>
+      MySQL Community Server can be easily installed on any linux computer with the following commands. 
+    </p>
+    <pre class="rounded" style="margin-bottom: 0;">
+      <code class="bash">
+  sudo apt-get update
+  sudo apt-get install mysql-server
+      </code>
+    </pre>
 
     <p>
       All procedure assume that your working directory is the main directory of the cloned Git folder 
@@ -67,7 +79,6 @@
 
   <section class="docs-section" id="section-linux-database">
     <h2 class="section-heading">1. SQL Database</h2>
-
     <p>
       SQL Database will be used to store account information, patient entries, device entries, and various recording information. 
       Due to the data size, neural recordings are not directly stored in database, but instead stored locally in binary format at the DataStorage folder. 
@@ -176,129 +187,28 @@
   <section class="docs-section" id="section-linux-deploy">
     <h2 class="section-heading">Deployment</h2>
     <p>
-      This section primarily focus on deployment of the Percept Analysis Platform on AWS EC2 instance. 
-      This procedure, however, will not cover details for best-practice for HIPAA compliance. For details, 
-      you may visit AWS's <a href="https://aws.amazon.com/compliance/hipaa-compliance/">HIPAA Compliance Page</a>.
+      The Server-side renderring version of BRAVO is a standalone application using Django, which means you can simply deploy your application by calling the following code in commandline:
+    </p> 
+    <pre class="rounded" style="margin-bottom: 0;">
+      <code class="bash">
+  # Assume you are in the Home Directory of the BRAVO Repository
+
+  # Activate the Virtual Environment Created during installation script.
+  source venv/bin/activate 
+
+  # Start Django Server
+  python3 manage.py runserver 0:8000
+      </code>
+    </pre>
+
+    <p>
+      Now you can simply go to your browser and access <code>http://localhost:8000</code> to see the server interface. 
     </p> 
     <p>
-      Deploying Django project in AWS is a common practice and there are many different resources online for this. 
-      Majority of the works needed (such as configuration for httpd and virtual hosts) are done in the installation script already, 
-      so the procedure here described mainly from a AWS Server setup point-of-view.
-    </p>
+      As of now, we do not recommend public deployment via cloud server. If you desire public deployment and have received institutional approval for public database, feel free to contact us
+      to 
+    </p> 
 
-    <h3>Amazon Web Service - Elastic Compute Cloud</h3>
-    <p>
-      Once you register your AWS Account, you can create your own Amazon EC2 instances. 
-      If this is the first time you use AWS, you will be offered free trial using their T2.micro or T3.micro 
-      (1 vCPU, 1G RAM) for free for 750 hours (essentially, 24/7 for a month) per month. 
-      However, it is recommended not to use those, as the Percept Analysis Platform hungers for computational power, 
-      and data above 600 seconds continuous data (such as commonly the Indefinite Streams) will likely lead to CPU lock at 99.9%.
-    </p>
-    <p>
-      In the demo shared by the author, BRAVO Platform is operating on a C6gn.large instance 
-      (2 3.60GHz vCPU, 4G RAM), which is sufficient for dozens of users as long as not concurrently processing 
-      significantly large files (such as hour-long medication wash-in wash-out recordings). 
-      Typical hourly-averaged CPU load is less than 0.05%, with processing of significantly large file (1 hour duration Indefinite Streaming) 
-      cost about 5% hourly-averaged CPU load. This instance is more than sufficient for individual clinics, 
-      but not for a general public server that support multiple clinics and research institutes. 
-      That being said, C6gn.large is chosen as demo because it is sufficient for demo with a significantly 
-      lower price than high-end instances ($0.034 per hour). The room for growth is large, given a 16 vCPU version of C5 instance 
-      (C5.4xlarge), cost only $0.68 per hour but will be more than sufficient to host a couple institutes. 
-      Cheaper variant of computation optimized server is also available through ARM-based processor, 
-      which offer 40% better price performance than typical x86 instances. The BRAVO Platform is compatible with both x86 image 
-      and ARM-based image.
-    </p>
-    <p>
-      Another factor to consider is the hard-drive. 
-      Typically, Percept JSON file do not take up much space, but factoring into pre-processed time-frequency data and various cache files, 
-      the size storage can be a few fold larger. As a reference, for 850 JSON files totaling with 2.60GB storage takes about 
-      7.0GB additional as cache files. This being said, non-research Percept JSON are usually significantly smaller, 
-      and Fixel Institute at University of Florida generate about 3.0GB JSON file over the span of one year. 
-      Given the simplicity of expanding AWS Storage, it is good to budget around 20G storage first and expand as needed.
-    </p>
-    <p>
-      Lastly, the Amazon Machine Image is recommended with Ubuntu 20.04 LTS as it naturally support all requirement 
-      for the Percept Analysis Platform. Installation on a brand new image is simply running the installation script.
-    </p>
-
-    <h3>Amazon Web Service - Security Group</h3>
-    <p>
-      Creating your own AWS Instance, clone the project, and run the installation script will automatically setup everything 
-      for the Percept Analysis Platform to work. This includes public access through HTTP in debug mode. 
-      By default, <code>DEBUG=True</code>, which will allow display of error messages that give you an idea about 
-      why some requests do not go through if a 404/500 Network Error occur.
-    </p>
-    <p>
-      Once the server is ready, you need to configure AWS EC2 instance's Security Group to allow HTTP access at Port 80. 
-      To do so, navigate to <code>EC2 -> Instances -> %YOUR_INSTANCE_ID% -> Security -> %YOUR_SECURITY_GROUPS_ID%</code>. 
-      By default, only Port 22 is enabled (for SSH Access). You can <b>Edit Inbound Rules</b> to include 2 additional protocols:
-    </p>
-    <pre class="rounded" style="margin-bottom: 0;">
-      <code class="bash">
-  Protocol 1:
-  Type: HTTP
-  Port: 80
-  Source: Anywhere-IPv4
-  
-  Protocol 2:
-  Type: HTTP
-  Port: 80
-  Source: Anywhere-IPv6
-      </code>
-    </pre>
-
-    <p>
-      These rules will grant you access to view your platform in HTTP with debug. 
-      Now you can simply navigate to your browser and see the website from <b>http://%YOUR_INSTANCE_EXTERNAL_IPv4%/</b>. 
-      If you see Django error page about that IP address is not allowed, it is most likely you entered a wrong IP address 
-      during installation or somehow your IP address changed (Dynamic IPs). 
-      Look at <b>PerceptServer_Pro/wsgi_production.py</b> and find <code>os.environ["SERVER_ADDRESS"]</code> and change the value to your new IP address.
-    </p>
-
-    <h3>Amazon Web Service - Elastic IPs</h3>
-    <p>
-      However, if you do not allocate a static IP through Elastic IPs, your external IP address could change with time 
-      (especially when restarting instances). Allocation is easy, the best option is to just allocate one from Amazon's Pool IPv4. 
-      Then associate that IP with your running EC2 instance. The association is usually fast and will be ready within minutes. 
-      After new IP is selected, go back to the previous section and follow the procedure to change your SERVER_ADDRESS to the new IP address.
-    </p>
-
-    <h3>Amazon Web Service - Application Load Balancer and Route 53</h3>
-    <p>
-      However, that is only reasonable within the institute or during development. 
-      The best practice is to configure DEBUG=False with a public SSL-certificate for HTTPS access and remove all debug pages. 
-      Register a AWS Application Load Balancer from EC2 Dashboard and add 2 listeners:
-    </p>
-    <pre class="rounded" style="margin-bottom: 0;">
-      <code class="bash">
-  Protocol: HTTP
-  Port: 80
-  Add Action: Forward to -> Target Group (Target Group is your Django Security Group)
-  
-  Protocol: HTTPS
-  Port: 443
-  Add Action: Forward to -> Target Group (Target Group is your Django Security Group)
-      </code>
-    </pre>
-
-    <p>
-      Noted that if you configure HTTPS, AWS will require you to provide a SSL-certificate, 
-      which you can generate using AWS's Free Public-SSL service, given that you have your domains ready. 
-      You can go to AWS Certificate Manager -> Request a public certificate. Though validations varies, you usually use 
-      DNS validation if you registered your domain through AWS Route 53.
-    </p>
-    <p>
-      Once certificate is obtained and HTTPS Load Balancer is configured, you can now create a hosted zone for your domain 
-      (even if you do not have the domain registered through AWS, you can still use the Hosted Zone service). 
-      Create a Type A routing from your domain record to the load balancer you created. Once everything is setup in Route 53 
-      and Load Balancer, you can now modify the <b>PerceptAnalysis/settings.py</b> file to include your new domain in Line 43: 
-      <code>ALLOWED_HOSTS = ["localhost", os.environ.get('SERVER_ADDRESS'), "%YOUR_DOMAIN_NAME%"]</code>, 
-      and change <code>DEBUG=True</code> to <code>DEBUG=False</code>.
-    </p>
-    <p>
-      Now that everything is configured, you will be able to access the website you setup through 
-      <b>https://%YOUR_DOMAIN_NAME%/</b>. All network traffics will be routing through HTTPS at Port 443 from now on.
-    </p>
   </section>
 </article>
 
@@ -312,15 +222,28 @@
         The procedure described here are tested on Windows 10 Home OS (Build 19043.1348) with source file directly 
         clone through GitHub Desktop. The procedure here are describing solely for HTTP deployment (internal use only). 
         
-        If you intend to deploy this software for public, I highly recommend using Linux deployment procedure for HTTPS. 
-        Tutorials are available for Amazon Web Service Elastic Cloud Compute (EC2) platform.
-
         Installation of Percept Analysis Platform on Windows is definitely more complicated than a full-controlled Linux Installation script. 
         Much of the contents require manual editing in different locations that could give rise to errors. 
         However, Windows remains to be the most common operating system right now and it is likely that the research institutes or 
         clinics do not have high-computation Linux Computer. In those scenario, we would like to ensure that Windows User 
         have access to our platform as well, so we develop this installation tutorial for Django Project with Windows Apache.
        </p>
+       
+      <div class="callout-block callout-block-danger">
+        <div class="content">
+          <h4 class="callout-title">
+            <span class="callout-icon-holder me-1">
+              <i class="fas fa-exclamation-triangle"></i>
+            </span>
+            IMPORTANT
+          </h4>
+          <p>
+            Currently, you can completely ignore the Windows-specific installation procedure and simply use WSL 2.0 (Windows Subsystem Linux) to install the BRAVO Platform 
+            in WSL if your Windows Edition support WSL 2.0. The instruction here might be outdated. 
+          </p>
+        </div>
+      </div>
+
     </section>
   </header>
   <section class="docs-section" id="section-windows-prereq">
